@@ -1,15 +1,18 @@
-# Robot Simulation - Isaac Lab Extension
+# Direct RL Hand Locomotion
 
-A custom Isaac Lab extension for robotic hand locomotion and balance control using Direct RL.
+A custom Isaac Lab extension for robotic hand locomotion and balance control using Direct RL. This project is modified from the Ant locomotion task.
 
 ## Installation
 
-1. Install [Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html)
+### 1. Install Isaac Lab
+Follow the [Isaac Lab Installation Guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
 
-2. Install this extension:
-   ```bash
-   python -m pip install -e source/rl_direct_hand_locomotion
-   ```
+### 2. Install this Extension
+Run the following command from this directory:
+
+```bash
+python -m pip install -e source/rl_direct_hand_locomotion
+```
 
 ## Available Tasks
 
