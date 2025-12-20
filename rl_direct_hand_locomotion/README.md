@@ -11,6 +11,7 @@ Follow the [Isaac Lab Installation Guide](https://isaac-sim.github.io/IsaacLab/m
 Run the following command from this directory:
 
 ```bash
+cd rl_direct_hand_locomotion
 python -m pip install -e source/rl_direct_hand_locomotion
 ```
 

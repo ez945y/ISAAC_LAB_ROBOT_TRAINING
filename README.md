@@ -19,6 +19,8 @@ Currently, the repository contains:
 
 - **[rl_direct_hand_locomotion](./rl_direct_hand_locomotion)**: A custom Isaac Lab extension for robotic hand control experiments. modified from ant locomotion task.
 
+- **[rl_manager_a1_navigation](./rl_manager_a1_navigation)**: A custom Isaac Lab extension for robotic navigation experiments. modified from a1 locomotion task.
+
 ## Installation
 
 ### 1. Clone the repository
