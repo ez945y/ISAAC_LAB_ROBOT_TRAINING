@@ -13,7 +13,7 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import RayCasterCfg, patterns, ContactSensorCfg
 from isaaclab.utils import configclass
-from .assets.unitree import UNITREE_A1_CFG
+from .assets.navigation import UNITREE_A1_CFG, WALL_CFG
 from . import mdp
 
 # -- 航點位置的集中設定 --
@@ -26,20 +26,18 @@ class WaypointSceneCfg(InteractiveSceneCfg):
     terrain = AssetBaseCfg(
             prim_path="/World/ground",  # prim_path 屬於 AssetBaseCfg
             spawn=sim_utils.GroundPlaneCfg(
-                size=(100.0, 100.0),      # (可選) 設定地面大小
-                color=(0.5, 0.5, 0.5),    # (可選) 設定地面顏色
-                physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=1.0, dynamic_friction=1.0), # (可選) 設定物理材質
+                size=(100.0, 100.0),      
+                color=(0.5, 0.5, 0.5),
+                physics_material=sim_utils.RigidBodyMaterialCfg(static_friction=1.0, dynamic_friction=1.0),
             )
         )
 
     # 機器人: Unitree A1
     robot: ArticulationCfg = UNITREE_A1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-    # 確保為機器人啟用接觸感測器
-    robot.spawn.activate_contact_sensors = True
 
     # 360度旋轉光達 (用於障礙物偵測)
     spinning_lidar = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/base/trunk",
+        prim_path="{ENV_REGEX_NS}/Robot/trunk",
         mesh_prim_paths=["/World/Wall"],
         ray_alignment="base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.3)),
@@ -54,11 +52,7 @@ class WaypointSceneCfg(InteractiveSceneCfg):
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
 
     # 牆壁障礙物
-    wall = AssetBaseCfg(
-        prim_path="/World/Wall",
-        spawn=sim_utils.UsdFileCfg(usd_path="/home/rst4090/isaacsim_assets/Assets/Isaac/5.0/Isaac/Environments/wall.usd"),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
-    )
+    wall = WALL_CFG
     
     # 燈光
     light = AssetBaseCfg(
@@ -177,7 +171,7 @@ class TerminationsCfg:
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), 
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names="trunk"), 
             "threshold": 1.0
         },
     )
@@ -200,11 +194,12 @@ class EventCfg:
         mode="reset",
         params={"position_range": (1.0, 1.0), "velocity_range": (0.0, 0.0)},
     )
+
     # 增加基座質量的隨機化
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
-        params={"asset_cfg": SceneEntityCfg("robot", body_names="base"), "mass_distribution_params": (-1.0, 3.0), "operation": "add"},
+        params={ "asset_cfg": SceneEntityCfg("robot", body_names="trunk"), "mass_distribution_params": (-1.0, 3.0), "operation": "add"},
     )
     reset_waypoint_nav = EventTerm(
         func=mdp.reset_waypoint_navigation,

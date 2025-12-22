@@ -88,7 +88,7 @@ from isaaclab.envs import (
     multi_agent_to_single_agent,
 )
 from isaaclab.utils.dict import print_dict
-from isaaclab.utils.io import dump_pickle, dump_yaml
+from isaaclab.utils.io import dump_yaml
 
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 
@@ -118,6 +118,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # note: certain randomizations occur in the environment initialization so we set the seed here
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+    # check for invalid combination of CPU device with distributed training
+    if args_cli.distributed and args_cli.device is not None and "cpu" in args_cli.device:
+        raise ValueError(
+            "Distributed training is not supported when using CPU device. "
+            "Please use GPU device (e.g., --device cuda) for distributed training."
+        )
 
     # multi-gpu training configuration
     if args_cli.distributed:
@@ -141,9 +147,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         log_dir += f"_{agent_cfg.run_name}"
     log_dir = os.path.join(log_root_path, log_dir)
 
-    # set the IO descriptors export flag if requested
+    # set the IO descriptors output directory if requested
     if isinstance(env_cfg, ManagerBasedRLEnvCfg):
         env_cfg.export_io_descriptors = args_cli.export_io_descriptors
+        env_cfg.io_descriptors_output_dir = log_dir
     else:
         omni.log.warn(
             "IO descriptors are only supported for manager based RL environments. No IO descriptors will be exported."
@@ -196,8 +203,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
 
     # run training
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
