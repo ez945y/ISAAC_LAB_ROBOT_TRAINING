@@ -1,6 +1,14 @@
-# RL Manager based A1 Navigation
+# RL Manager-based A1 Navigation
 
-A custom Isaac Lab extension for A1 robot navigation using Manager-based RL.
+A custom Isaac Lab extension for Unitree A1 robot waypoint navigation using Manager-based RL.
+
+## Features
+
+- **Waypoint Navigation**: Train A1 robot to navigate through multiple waypoints in sequence
+- **360° LiDAR Sensing**: Spinning LiDAR for obstacle detection
+- **Contact Sensors**: Foot contact detection for gait analysis
+- **Custom Rewards**: Position progress, heading alignment, velocity tracking, and waypoint bonuses
+- **Domain Randomization**: Mass randomization for robust sim-to-real transfer
 
 ## Installation
 
@@ -19,18 +27,25 @@ python -m pip install -e source/rl_manager_a1_navigation
 
 | Task ID | Description |
 |---------|-------------|
-| `Isaac-Waypoint-Navigation-v0` | A1 robot waypoint navigation task |
+| `Isaac-Waypoint-Navigation-v0` | A1 robot waypoint navigation with 4 waypoints |
 
 ## Usage
 
 ### Training
 ```bash
+# Basic training
 python scripts/rsl_rl/train.py --task=Isaac-Waypoint-Navigation-v0
+
+# Training with 4096 environments
+python scripts/rsl_rl/train.py --task=Isaac-Waypoint-Navigation-v0 --num_envs=4096
+
+# Training with video recording
+python scripts/rsl_rl/train.py --task=Isaac-Waypoint-Navigation-v0 --video
 ```
 
 ### Play Trained Policy
 ```bash
-python scripts/rsl_rl/play.py --task=Isaac-Waypoint-Navigation-v0
+python scripts/rsl_rl/play.py --task=Isaac-Waypoint-Navigation-v0-Play
 ```
 
 ### Testing
@@ -40,21 +55,62 @@ python scripts/zero_agent.py --task=Isaac-Waypoint-Navigation-v0
 
 # Random-action agent
 python scripts/random_agent.py --task=Isaac-Waypoint-Navigation-v0
+
+# List all available environments
+python scripts/list_envs.py
 ```
 
 ## Project Structure
 
 ```
-source/rl_manager_a1_navigation/rl_manager_a1_navigation/tasks/manager_based/navigation/
-├── navigation_env_cfg.py # Environment configuration
-├── mdp/
-│   ├── rewards.py        # Reward functions
-│   └── command.py        # Command generators
-├── assets/
-│   └── unitree.py        # Robot configuration
-└── agents/
-    └── rsl_rl_ppo_cfg.py # PPO training config
+rl_manager_a1_navigation/
+├── scripts/
+│   ├── rsl_rl/
+│   │   ├── train.py          # RSL-RL training script
+│   │   └── play.py           # Policy playback script
+│   ├── random_agent.py       # Random action testing
+│   ├── zero_agent.py         # Zero action testing
+│   └── list_envs.py          # List available environments
+│
+└── source/rl_manager_a1_navigation/rl_manager_a1_navigation/
+    └── tasks/manager_based/navigation/
+        ├── __init__.py           # Task registration
+        ├── navigation_env_cfg.py # Environment configuration
+        ├── mdp/
+        │   ├── __init__.py
+        │   ├── rewards.py        # Custom reward functions
+        │   └── command.py        # Waypoint command generator
+        ├── assets/
+        │   ├── navigation.py     # Robot & scene assets config
+        │   └── wall.usd          # Wall obstacle model
+        └── agents/
+            └── rsl_rl_ppo_cfg.py # PPO training hyperparameters
 ```
+
+## Configuration
+
+### Environment Settings (`navigation_env_cfg.py`)
+
+- **Scene**: Ground plane, A1 robot, LiDAR, contact sensors, wall obstacles
+- **Actions**: Joint position control with 0.25 scale
+- **Observations**: Goal distance, heading error, base velocity, joint states
+- **Rewards**: Alive bonus, velocity tracking, position/heading alignment, waypoint bonus
+- **Terminations**: Timeout, illegal body contact
+
+### Training Settings (`rsl_rl_ppo_cfg.py`)
+
+- **Algorithm**: PPO with adaptive learning rate
+- **Network**: Actor [512, 256, 128], Critic [1024, 512, 256]
+- **Max Iterations**: 1500
+- **Steps per Env**: 24
+
+## Waypoints
+
+Default waypoint sequence (configurable in `navigation_env_cfg.py`):
+1. (2.8, 0.0) - Start position
+2. (2.8, -4.3) - First turn
+3. (-1.6, -4.3) - Second turn  
+4. (-1.6, 0.0) - Return
 
 ## License
 
