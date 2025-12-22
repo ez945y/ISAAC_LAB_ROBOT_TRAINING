@@ -30,7 +30,7 @@ python scripts/rsl_rl/train.py --task=Isaac-Hand-Direct-v0
 
 ### Play Trained Policy
 ```bash
-python scripts/rsl_rl/play.py --task=Isaac-Hand-Direct-v0
+python scripts/rsl_rl/play.py --task=Isaac-Hand-Direct-Play-v0
 ```
 
 ### Testing

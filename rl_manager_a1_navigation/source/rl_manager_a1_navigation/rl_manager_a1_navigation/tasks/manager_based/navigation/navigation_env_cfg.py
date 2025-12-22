@@ -252,7 +252,7 @@ class WaypointNavigationEnvCfg_PLAY(WaypointNavigationEnvCfg):
         super().__post_init__()
 
         # make a smaller scene for play
-        self.scene.num_envs = 50
+        self.scene.num_envs = 1
         self.scene.env_spacing = 1
         # disable randomization for play
         self.observations.policy.enable_corruption = False

@@ -10,8 +10,8 @@ This repository serves as a workspace to explore Isaac Lab features, create cust
 
 - **OS**: Linux (Ubuntu 24.04)
 - **Python**: 3.11
-- **NVIDIA Isaac Sim**: 5.0+
-- **Isaac Lab**: 2.2+
+- **NVIDIA Isaac Sim**: 5.1+
+- **Isaac Lab**: 2.3.0+
 
 ## Projects
 

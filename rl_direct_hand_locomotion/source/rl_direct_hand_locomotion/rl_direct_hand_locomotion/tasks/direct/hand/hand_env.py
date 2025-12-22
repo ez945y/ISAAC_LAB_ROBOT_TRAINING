@@ -78,6 +78,15 @@ def normalize_angle(x):
     return torch.atan2(torch.sin(x), torch.cos(x))
 
 
+@configclass
+class HandEnvCfg_PLAY(HandEnvCfg):
+    """Play configuration with reduced environments for inference."""
+    def __post_init__(self) -> None:
+        # Make a smaller scene for play
+        self.scene.num_envs = 1
+        self.scene.env_spacing = 2.0
+
+
 class HandEnv(DirectRLEnv):
     cfg: HandEnvCfg
 

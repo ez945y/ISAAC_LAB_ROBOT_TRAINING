@@ -35,17 +35,11 @@ python -m pip install -e source/rl_manager_a1_navigation
 ```bash
 # Basic training
 python scripts/rsl_rl/train.py --task=Isaac-Waypoint-Navigation-v0
-
-# Training with 4096 environments
-python scripts/rsl_rl/train.py --task=Isaac-Waypoint-Navigation-v0 --num_envs=4096
-
-# Training with video recording
-python scripts/rsl_rl/train.py --task=Isaac-Waypoint-Navigation-v0 --video
 ```
 
 ### Play Trained Policy
 ```bash
-python scripts/rsl_rl/play.py --task=Isaac-Waypoint-Navigation-v0-Play
+python scripts/rsl_rl/play.py --task=Isaac-Waypoint-Navigation--Play-v0
 ```
 
 ### Testing

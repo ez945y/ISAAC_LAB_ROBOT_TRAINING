@@ -21,3 +21,13 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:HandPPORunnerCfg",
     },
 )
+
+gym.register(
+    id="Isaac-Hand-Direct-Play-v0",
+    entry_point=f"{__name__}.hand_env:HandEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.hand_env:HandEnvCfg_PLAY",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:HandPPORunnerCfg",
+    },
+)
