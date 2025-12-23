@@ -124,7 +124,7 @@ class RewardsCfg:
     track_velocity_exp = RewTerm(
         func=mdp.track_desired_velocity_exp,
         weight=5.0,
-        params={"command_name": "base_velocity", "desired_speed": 0.5, "std": 0.25}
+        params={"command_name": "base_velocity", "desired_speed": 0.5, "std": 0.5}
     )
     track_position = RewTerm(
         func=mdp.position_progress_reward, 
@@ -147,20 +147,20 @@ class RewardsCfg:
         }
     )
 
-    height_l2_penalty = RewTerm(func=mdp.height_l2_penalty, weight=-2.0, params={"target_height": 0.42})
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.1)
-    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
-    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-2.0)
+    height_l2_penalty = RewTerm(func=mdp.height_l2_penalty, weight=-2.0, params={"target_height": 0.38})
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2)
+    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-1.0)
+    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.5)
     
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-0.0002)
-    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-1e-6)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.5)
     feet_air_time = RewTerm(
         func=mdp.feet_air_time,
-        weight=2.0, 
+        weight=0.5, 
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"), # << 確保有 body_names 過濾器
-            "threshold": 0.5,
+            "threshold": 0.25,
         }
     )
 
@@ -230,8 +230,8 @@ class WaypointNavigationEnvCfg(ManagerBasedRLEnvCfg):
     
     # 相機視角設定
     viewer: ViewerCfg = ViewerCfg(
-        eye=(3.5, 0.9, 11.4),  # 相機位置 (x, y, z)
-        lookat=(0.0, 0.0, 0.0),  # 相機目標位置
+        eye=(4.5, 2.0, 5.0),  # 相機位置 (x, y, z)
+        lookat=(1.0, -2.0, 0.0),  # 相機目標位置
         origin_type="world"  # 使用世界座標系
     )
 
