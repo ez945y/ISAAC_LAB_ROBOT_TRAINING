@@ -1,0 +1,44 @@
+# SO-ARM-101 Robot Description for Lula Kinematics
+# 根據 so101_new_calib.urdf 的實際關節名稱
+
+api_version: 1.0
+
+# 配置空間關節（不含夾爪）
+cspace:
+    - Rotation
+    - Pitch
+    - Elbow
+    - Wrist_Pitch
+    - Wrist_Roll
+
+# 根連桿名稱
+root_link: base
+
+# 末端執行器連桿名稱
+end_effector_link: gripper
+
+# 預設關節位置
+default_q:
+    - 0.0   # Rotation
+    - 0.0   # Pitch
+    - 0.0   # Elbow
+    - 0.0   # Wrist_Pitch
+    - 0.0   # Wrist_Roll
+
+# 關節限制（從 URDF 提取）
+joint_limits:
+    Rotation:
+        lower: -1.91986
+        upper: 1.91986
+    Pitch:
+        lower: -1.74533
+        upper: 1.74533
+    Elbow:
+        lower: -1.74533
+        upper: 1.5708
+    Wrist_Pitch:
+        lower: -1.65806
+        upper: 1.65806
+    Wrist_Roll:
+        lower: -2.79253
+        upper: 2.79253

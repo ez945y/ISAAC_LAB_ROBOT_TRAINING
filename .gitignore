@@ -4,6 +4,8 @@
 **/*.so
 **/*.log*
 
+lerobot/
+
 # Omniverse
 **/*.dmp
 **/.thumbs
