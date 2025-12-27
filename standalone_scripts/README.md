@@ -65,6 +65,44 @@ Full-featured experiment script with all capabilities:
 python 04_trajectory_record.py
 ```
 
+### 05_robot_demo.py - SO-ARM-101 Robot Demo
+Basic robotic arm demonstration with keyboard control.
+
+```bash
+python 05_robot_demo.py
+```
+
+### 06_teleoperate_demo.py - Leader Arm Teleoperation
+Teleoperation of SO-ARM-101 robot using a physical leader arm via socket connection.
+
+#### Prerequisites
+1. Start the leader arm sender (in a separate terminal, using lerobot environment):
+```bash
+lerobot-teleoperate_port \
+    --teleop.type=so101_leader \
+    --teleop.port=/dev/tty.usbmodem5AA90244081 \
+    --teleop.id=my_awesome_leader_arm
+```
+
+2. Run this demo (from Isaac Lab environment):
+```bash
+python 06_teleoperate_demo.py
+```
+
+#### Features
+- Reads end-effector pose (x, y, z in meters) from socket port 5359
+- Forward kinematics computed on the leader arm sender side
+- Supports IK controller for simulation
+- Real-time pose visualization with target marker
+
+#### Arguments
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--controller` | `ik` | Controller type: `ik` or `osc` |
+| `--socket-host` | `127.0.0.1` | Socket host for leader arm |
+| `--socket-port` | `5359` | Socket port for leader arm |
+| `--position-scale` | `1.0` | Scale factor for position |
+
 ## Script Evolution
 
 ```
@@ -75,4 +113,59 @@ python 04_trajectory_record.py
 03_domino_fpv.py           (+Dominoes +First-person view)
         ↓
 04_trajectory_record.py    (+Trajectory recording/playback)
+        ↓
+05_robot_demo.py           (+SO-ARM-101 robot)
+        ↓
+06_teleoperate_demo.py     (+Leader arm teleoperation)
 ```
+
+## Architecture
+
+The leader arm teleoperation system consists of two parts:
+
+1. **Leader Arm Sender** (`lerobot-teleoperate_port` on Mac)
+   - Connects to physical SO-101 leader arm via serial port
+   - Reads joint positions and normalizes them to [0, 1] range
+   - Sends joint data via socket (port 5359)
+
+2. **Simulation Demo** (`06_teleoperate_demo.py` on Ubuntu)
+   - Receives joint data from socket
+   - Directly sets joint positions on the simulated robot
+   - Supports both **Joint Mode** (direct) and **EE Mode** (IK/OSC)
+
+### Running the Demo
+
+**Step 1: Start simulator on Ubuntu (server mode)**
+```bash
+cd ~/robot/standalone_scripts
+python 06_teleoperate_demo.py --server-mode
+```
+
+**Step 2: Start leader arm on Mac (client mode)**
+```bash
+lerobot-teleoperate_port \
+    --teleop.type=so101_leader \
+    --teleop.port=/dev/tty.usbmodem5AA90244081 \
+    --teleop.id=my_awesome_leader_arm \
+    --client_mode=true \
+    --socket_host=<Ubuntu_IP>
+```
+
+### Data Flow Diagram
+
+```
+┌─────────────────────────────┐      Socket (5359)      ┌─────────────────────┐
+│  lerobot-teleoperate_port   │  ──────────────────────▶│  06_teleoperate_    │
+│  (Physical Leader Arm)      │  JSON: {mode: "joint",  │  demo.py            │
+│  Mac - Reads Joints         │   shoulder_pan: 0.5,    │  (Isaac Lab Sim)    │
+│                             │   shoulder_lift: 0.3,   │  Ubuntu             │
+│                             │   ...}                  │                     │
+└─────────────────────────────┘                         └─────────────────────┘
+```
+
+### Control Modes
+
+| Mode | Description | When Used |
+|------|-------------|-----------|
+| **Joint** | Direct joint position control | Default (faster, more stable) |
+| **EE** | End-effector pose with IK/OSC | Legacy mode (for pose-based control) |

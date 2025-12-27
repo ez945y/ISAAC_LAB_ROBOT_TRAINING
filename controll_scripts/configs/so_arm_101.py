@@ -40,7 +40,7 @@ class SOArm101Config(BaseRobotConfig):
             script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             self.usd_path = os.path.join(script_dir, "so_arm_101", "SO-ARM101.usd")
         
-        # 設定預設關節名稱
+        # 設定預設關節名稱 (匹配 Isaac Sim 小寫底線命名)
         if self.arm_joint_names is None:
             self.arm_joint_names = [
                 "shoulder_pan",
@@ -49,3 +49,6 @@ class SOArm101Config(BaseRobotConfig):
                 "wrist_flex",
                 "wrist_roll",
             ]
+        
+        # 夾爪名稱
+        self.gripper_joint_name = "gripper"

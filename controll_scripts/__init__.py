@@ -24,4 +24,5 @@ __all__ = [
     # Input Devices
     "BaseInputDevice",
     "KeyboardInputDevice",
+    "LeaderArmInputDevice",
 ]
