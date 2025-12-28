@@ -77,6 +77,7 @@ class BaseRobotConfig(ABC):
                 ),
                 "gripper": ImplicitActuatorCfg(
                     joint_names_expr=[self.gripper_joint_name],
+                    effort_limit=2.0,  # Limit gripper force to prevent "explosion"
                     stiffness=self.gripper_stiffness,
                     damping=self.gripper_damping,
                 ),

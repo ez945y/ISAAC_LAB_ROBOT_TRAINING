@@ -89,6 +89,28 @@ lerobot-teleoperate_port \
 python 06_teleoperate_demo.py
 ```
 
+### 07_lerobot_teleoperate.py - LeRobot Bridge (Leader Arm Sender)
+This script acts as the bridge for the physical leader arm. It reads joint data from the hardware using the `LeRobot` library and streams it over a socket network.
+
+#### Installation (On Mac/Leader Arm Machine)
+To use this script, you must first install the `LeRobot` library:
+1. Clone the LeRobot repository: `git clone https://github.com/huggingface/lerobot.git`
+2. Install dependencies: `cd lerobot && pip install -e .`
+3. **Crucial Step**: Copy `07_lerobot_teleoperate.py` from this repository into your `lerobot` source folder or run it from this location ensuring the `lerobot` environment is active.
+
+#### Usage
+```bash
+python 07_lerobot_teleoperate.py \
+    --teleop.type=so101_leader \
+    --teleop.port=/dev/tty.usbmodem5AA90244081 \
+    --teleop.id=my_awesome_leader_arm
+```
+
+#### Features
+- Streams normalized joint positions (0~1) via JSON over Socket.
+- Supports both Server and Client modes.
+- Real-time terminal feedback of joint values.
+
 #### Features
 - Reads end-effector pose (x, y, z in meters) from socket port 5359
 - Forward kinematics computed on the leader arm sender side
@@ -117,16 +139,20 @@ python 06_teleoperate_demo.py
 05_robot_demo.py           (+SO-ARM-101 robot)
         ↓
 06_teleoperate_demo.py     (+Leader arm teleoperation)
+        ↓
+07_lerobot_teleoperate.py  (+LeRobot bridge sender)
 ```
 
 ## Architecture
 
 The leader arm teleoperation system consists of two parts:
 
-1. **Leader Arm Sender** (`lerobot-teleoperate_port` on Mac)
-   - Connects to physical SO-101 leader arm via serial port
-   - Reads joint positions and normalizes them to [0, 1] range
-   - Sends joint data via socket (port 5359)
+1. **Leader Arm Sender** (`07_lerobot_teleoperate.py` on Mac)
+   - Requires `lerobot` library installed.
+   - Connects to physical SO-101 leader arm via serial port.
+   - Completes calibration of the leader arm.
+   - Reads joint positions and normalizes them to [0, 1] range.
+   - Sends joint data via socket (port 5359).
 
 2. **Simulation Demo** (`06_teleoperate_demo.py` on Ubuntu)
    - Receives joint data from socket
@@ -138,24 +164,24 @@ The leader arm teleoperation system consists of two parts:
 **Step 1: Start simulator on Ubuntu (server mode)**
 ```bash
 cd ~/robot/standalone_scripts
-python 06_teleoperate_demo.py --server-mode
+python 06_teleoperate_demo.py
 ```
 
 **Step 2: Start leader arm on Mac (client mode)**
 ```bash
-lerobot-teleoperate_port \
+# Ensure you are in the environment where lerobot is installed
+python 07_lerobot_teleoperate.py \
     --teleop.type=so101_leader \
     --teleop.port=/dev/tty.usbmodem5AA90244081 \
     --teleop.id=my_awesome_leader_arm \
-    --client_mode=true \
-    --socket_host=<Ubuntu_IP>
+    --socket_host=<IP>
 ```
 
 ### Data Flow Diagram
 
 ```
 ┌─────────────────────────────┐      Socket (5359)      ┌─────────────────────┐
-│  lerobot-teleoperate_port   │  ──────────────────────▶│  06_teleoperate_    │
+│  07_lerobot_teleoperate.py  │  ──────────────────────▶│  06_teleoperate_    │
 │  (Physical Leader Arm)      │  JSON: {mode: "joint",  │  demo.py            │
 │  Mac - Reads Joints         │   shoulder_pan: 0.5,    │  (Isaac Lab Sim)    │
 │                             │   shoulder_lift: 0.3,   │  Ubuntu             │

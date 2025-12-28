@@ -26,7 +26,7 @@ class SOArm101Config(BaseRobotConfig):
     ik_orientation_weight: float = 0.7  # 提高姿態權重減少耦合
     
     # OSC 控制器配置
-    osc_motion_stiffness: tuple = (150.0, 150.0, 150.0, 50.0, 50.0, 50.0)
+    osc_motion_stiffness: tuple = (100.0, 100.0, 100.0, 100.0, 100.0, 100.0)
     osc_motion_damping_ratio: tuple = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
     osc_effort_limit: float = 50.0
     
