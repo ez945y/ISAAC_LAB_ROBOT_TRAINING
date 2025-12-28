@@ -48,12 +48,6 @@ parser.add_argument(
     help='Socket port for leader arm data (default: 5359)',
 )
 parser.add_argument(
-    '--client-mode',
-    action='store_true',
-    default=False,
-    help='Run as socket client (connect to Mac). Default is server mode.',
-)
-parser.add_argument(
     '--position-scale',
     type=float,
     default=1.0,
@@ -417,7 +411,7 @@ def main():
         device=args_cli.device,
         socket_host=args_cli.socket_host,
         socket_port=args_cli.socket_port,
-        server_mode=not args_cli.client_mode,
+        server_mode=True,  # Always server mode
         position_scale=args_cli.position_scale,
     )
 
