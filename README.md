@@ -30,6 +30,17 @@ Currently, the repository contains:
   - `02_keyboard_control.py` - WASD keyboard control with command smoothing
   - `03_domino_fpv.py` - Domino physics + first-person camera following
   - `04_trajectory_record.py` - Full-featured: trajectory recording/playback, dominoes, deformable objects
+  - `05_robot_demo.py` - SO-ARM-101 robot arm demo with keyboard control
+  - `06_teleoperate_demo.py` - **Real-to-Sim Teleoperation** receiver (runs on Ubuntu)
+  - `07_teleoperate.py` - **Real-to-Sim Teleoperation** sender (runs on Mac with LeRobot)
+
+### Real-to-Sim Teleoperation
+
+Control a simulated SO-ARM-101 robot in Isaac Sim using a physical leader arm:
+- **Mac** runs `07_teleoperate.py` (requires [LeRobot](https://github.com/huggingface/lerobot)) to read physical arm joint positions
+- **Ubuntu** runs `06_teleoperate_demo.py` to receive joint data and mirror movements in simulation
+- Supports direct joint control mode with normalized joint positions (0~1)
+- See [standalone_scripts/README.md](./standalone_scripts/README.md) for detailed setup instructions
 
 ## Installation
 

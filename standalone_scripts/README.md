@@ -149,6 +149,7 @@ The leader arm teleoperation system consists of two parts:
 
 1. **Leader Arm Sender** (`07_lerobot_teleoperate.py` on Mac)
    - Requires `lerobot` library installed.
+   - Puts and rename teleoperate.py and teleop_processors.py in lerobot/scripts/ folder for 07 section to work. and register them on lerobot/pyproject.toml
    - Connects to physical SO-101 leader arm via serial port.
    - Completes calibration of the leader arm.
    - Reads joint positions and normalizes them to [0, 1] range.
@@ -170,11 +171,25 @@ python 06_teleoperate_demo.py
 **Step 2: Start leader arm on Mac (client mode)**
 ```bash
 # Ensure you are in the environment where lerobot is installed
-python 07_lerobot_teleoperate.py \
+python teleoperate.py \
     --teleop.type=so101_leader \
     --teleop.port=/dev/tty.usbmodem5AA90244081 \
     --teleop.id=my_awesome_leader_arm \
-    --socket_host=<IP>
+    --socket_host=192.168.0.1
+```
+
+**Step 2b (Optional): Control both Leader and Follower arms simultaneously**
+
+To also control a physical follower arm at the same time, add three more parameters:
+```bash
+python teleoperate.py \
+    --teleop.type=so101_leader \
+    --teleop.port=/dev/tty.usbmodem5AA90244081 \
+    --teleop.id=my_awesome_leader_arm \
+    --robot.type=so101_follower \
+    --robot.port=/dev/tty.usbmodem5AA90244141 \
+    --robot.id=my_awesome_follower_arm \
+    --socket_host=192.168.0.1
 ```
 
 ### Data Flow Diagram

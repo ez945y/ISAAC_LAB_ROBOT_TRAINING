@@ -38,10 +38,28 @@ from dataclasses import asdict, dataclass
 from pprint import pformat
 
 from lerobot.configs import parser
-from lerobot.teleoperators import (
+from lerobot.robots import (  # noqa: F401
+    Robot,
+    RobotConfig,
+    bi_so100_follower,
+    earthrover_mini_plus,
+    hope_jr,
+    koch_follower,
+    make_robot_from_config,
+    so100_follower,
+    so101_follower,
+)
+from lerobot.teleoperators import (  # noqa: F401
     Teleoperator,
     TeleoperatorConfig,
+    bi_so100_leader,
+    gamepad,
+    homunculus,
+    keyboard,
+    koch_leader,
     make_teleoperator_from_config,
+    so100_leader,
+    so101_leader,
 )
 from lerobot.utils.import_utils import register_third_party_plugins
 from lerobot.utils.robot_utils import precise_sleep
@@ -61,6 +79,8 @@ class TeleoperatePortConfig:
     # Socket configuration (connects to simulation server)
     socket_host: str = '127.0.0.1'  # Target server host
     socket_port: int = 5359
+    # Physical robot configuration (optional)
+    robot: RobotConfig | None = None
     # Control mode: 'joint' for direct joint control, 'ee' for FK-based EE control
     control_mode: str = 'joint'
     # Path to URDF file for forward kinematics (only used in 'ee' mode)
@@ -118,9 +138,10 @@ class SocketClient:
 
 def teleoperate_port_loop(
     teleop: Teleoperator,
-    socket_conn,
+    socket_conn: SocketClient,
     processor,
     fps: int,
+    robot: Robot | None = None,
     duration: float | None = None,
 ):
     """
@@ -134,6 +155,8 @@ def teleoperate_port_loop(
         duration: Maximum duration in seconds. If None, runs indefinitely.
     """
     logger.info(f"Starting teleoperation loop at {fps} fps (mode: {processor.mode})")
+    if robot:
+        logger.info(f"Physical robot control ENABLED: {robot.__class__.__name__}")
     logger.info("Press Ctrl+C to stop")
 
     start = time.perf_counter()
@@ -149,6 +172,10 @@ def teleoperate_port_loop(
 
         # Send data to connected clients
         socket_conn.send(data)
+
+        # Send action to physical robot if enabled
+        if robot:
+            robot.send_action(action)
 
         # Display current state (overwrite same line)
         if processor.mode == 'joint':
@@ -187,12 +214,19 @@ def teleoperate_port(cfg: TeleoperatePortConfig):
     socket_conn = SocketClient(host=cfg.socket_host, port=cfg.socket_port)
     socket_conn.connect()
 
+    # Create physical robot if configured
+    robot = None
+    if cfg.robot:
+        robot = make_robot_from_config(cfg.robot)
+        robot.connect()
+
     try:
         teleoperate_port_loop(
             teleop=teleop,
             socket_conn=socket_conn,
             processor=processor,
             fps=cfg.fps,
+            robot=robot,
             duration=cfg.teleop_time_s,
         )
     except KeyboardInterrupt:
@@ -201,6 +235,8 @@ def teleoperate_port(cfg: TeleoperatePortConfig):
     finally:
         socket_conn.stop()
         teleop.disconnect()
+        if robot:
+            robot.disconnect()
         logger.info("Cleanup complete")
 
 
