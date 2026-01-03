@@ -9,7 +9,13 @@ Robot Control Library - 機器人控制庫
 
 from .controllers import BaseController, IKController, OSCController, ControllerFactory, ControllerType
 from .configs import BaseRobotConfig, SOArm101Config
-from .input_devices import BaseInputDevice, KeyboardInputDevice, LeaderArmInputDevice
+from .input_devices import (
+    BaseInputDevice,
+    KeyboardInputDevice,
+    LeaderArmInputDevice,
+    Se3LeaderArm,
+    Se3LeaderArmCfg,
+)
 
 __all__ = [
     # Controllers
@@ -25,4 +31,7 @@ __all__ = [
     "BaseInputDevice",
     "KeyboardInputDevice",
     "LeaderArmInputDevice",
+    # Isaac Lab DeviceBase compatible
+    "Se3LeaderArm",
+    "Se3LeaderArmCfg",
 ]

@@ -6,5 +6,13 @@
 from .base import BaseInputDevice
 from .keyboard import KeyboardInputDevice
 from .leader_arm import LeaderArmInputDevice
+from .se3_leader_arm import Se3LeaderArm, Se3LeaderArmCfg
 
-__all__ = ["BaseInputDevice", "KeyboardInputDevice", "LeaderArmInputDevice"]
+__all__ = [
+    "BaseInputDevice",
+    "KeyboardInputDevice",
+    "LeaderArmInputDevice",
+    # Isaac Lab DeviceBase compatible
+    "Se3LeaderArm",
+    "Se3LeaderArmCfg",
+]

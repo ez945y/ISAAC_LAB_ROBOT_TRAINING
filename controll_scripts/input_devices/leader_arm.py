@@ -296,6 +296,14 @@ class LeaderArmInputDevice(BaseInputDevice):
         try:
             # Check data mode
             mode = data.get('mode', 'joint')
+            if 'mode' not in data:
+                 print(f"[DEBUG] 'mode' key missing in data: {data.keys()}")
+            
+            # TODO: Remove this debug print later
+            # if getattr(self, "_debug_counter", 0) % 60 == 0:
+            #     print(f"[DEBUG] Received data mode: {mode}, keys: {list(data.keys())}")
+            # self._debug_counter = getattr(self, "_debug_counter", 0) + 1
+
             self._data_mode = mode
 
             if mode == 'joint':
