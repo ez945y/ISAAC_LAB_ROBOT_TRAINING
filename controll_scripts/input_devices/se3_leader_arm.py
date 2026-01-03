@@ -195,9 +195,13 @@ class Se3LeaderArm(DeviceBase):
                 - delta pose: First 6 elements as [dx, dy, dz, drx, dry, drz]
                 - gripper command: Last element as binary (+1.0 open, -1.0 close)
         """
-        if self._leader_arm is None:
-            # Return zero command - 6D for joint control (5 arm joints + 1 gripper)
-            return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
+        if self._leader_arm is None or not self.is_connected:
+            # Return default pose (curled up) instead of zeros or 0.5 defaults
+            # Corresponds to init_state in env cfg:
+            # J0: 0.055, J1: -1.74, J2: 1.665, J3: 1.233, J4: -0.077, Gripper: -0.17 (Closed)
+            default_pose = torch.tensor([0.055, -1.74, 1.665, 1.233, -0.077, -0.17], 
+                                      dtype=torch.float32, device=self._sim_device)
+            return default_pose
         
         # Check current mode
         if hasattr(self._leader_arm, 'data_mode') and self._leader_arm.data_mode == 'joint':
@@ -323,8 +327,10 @@ class Se3LeaderArm(DeviceBase):
         try:
             # Check if target_pose has expected shape
             if target_pose is None or target_pose.numel() < 7:
-                # Return zero command if no valid data - 6D for joint control
-                return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
+                # Return default pose if no valid data
+                default_pose = torch.tensor([0.055, -1.74, 1.665, 1.233, -0.077, -0.17], 
+                                          dtype=torch.float32, device=self._sim_device)
+                return default_pose
             
             if target_pose.dim() == 2:
                 pose_np = target_pose[0].cpu().numpy()
@@ -332,12 +338,16 @@ class Se3LeaderArm(DeviceBase):
                 pose_np = target_pose.cpu().numpy()
             
             if pose_np.shape[0] < 7:
-                return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
+                default_pose = torch.tensor([0.055, -1.74, 1.665, 1.233, -0.077, -0.17], 
+                                          dtype=torch.float32, device=self._sim_device)
+                return default_pose
                 
             curr_pos = pose_np[:3]
             curr_quat = pose_np[3:7]  # w, x, y, z
         except Exception:
-            return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
+            default_pose = torch.tensor([0.055, -1.74, 1.665, 1.233, -0.077, -0.17], 
+                                      dtype=torch.float32, device=self._sim_device)
+            return default_pose
         
         # Initialize on first valid reading
         if not self._initialized and self._leader_arm.is_connected:

@@ -48,6 +48,15 @@ source/isaaclab_mimic/
 └── robot/  -> symlink to ISAAC_LAB_REBOT_TRAINING (for editing and viewing)
 ```
 
+## Configuration for Leader Arm Teleoperation
+To use the `leader_arm` device, you need to update Isaac Lab's device factory. We have provided a modified file for this purpose.
+
+Run the following command to overwrite the default factory file:
+
+```bash
+cp /home/rst_spark/IsaacLab/source/isaaclab_mimic/robot/mimic_envs/teleop_device_factory_modified.py /home/rst_spark/IsaacLab/source/isaaclab/isaaclab/devices/teleop_device_factory.py
+```
+
 ## Usage
 
 After setup is complete, you can run the following command:
