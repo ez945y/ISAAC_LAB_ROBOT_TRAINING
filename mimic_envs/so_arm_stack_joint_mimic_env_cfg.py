@@ -7,11 +7,12 @@ SO-ARM-101 Isaac Lab Mimic Environment Configuration (Joint Control)
 
 import os
 import torch
-from dataclasses import MISSING
+from dataclasses import MISSING, field
 
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
+from isaaclab.devices.device_base import DevicesCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.envs.mdp.actions.actions_cfg import JointPositionActionCfg
 from isaaclab.envs.mimic_env_cfg import DataGenConfig, MimicEnvCfg, SubTaskConfig
@@ -28,6 +29,9 @@ from isaaclab.sensors.frame_transformer.frame_transformer_cfg import (
 )
 from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
 from isaaclab.utils import configclass
+
+# Import Se3LeaderArmCfg for teleop device registration
+from isaaclab_mimic.controll_scripts.input_devices.se3_leader_arm import Se3LeaderArmCfg
 
 
 ##
@@ -288,8 +292,28 @@ class SOArmStackJointMimicEnvCfg(ManagerBasedRLEnvCfg, MimicEnvCfg):
         self.episode_length_s = 60.0
         self.sim.dt = 0.01  # 100Hz physics
         self.sim.render_interval = 2
+        
+        # === Camera settings ===
+        self.viewer.eye = [-0.4, -0.4, 0.4]
+        self.viewer.lookat = [0.0, 0.0, 0.15]
+
+        # === Teleop devices configuration ===
+        # Register leader_arm as a teleop device
+        self.teleop_devices = DevicesCfg(
+            devices={
+                "leader_arm": Se3LeaderArmCfg(
+                    socket_host="0.0.0.0",
+                    socket_port=5359,
+                    server_mode=True,
+                    pos_sensitivity=1.0,
+                    rot_sensitivity=1.0,
+                    sim_device="cuda:0",
+                ),
+            }
+        )
 
         # === Robot USD path ===
+        # The USD file is in isaaclab_mimic/controll_scripts/so_arm_101/SO-ARM101.usd
         script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         usd_path = os.path.join(script_dir, "controll_scripts", "so_arm_101", "SO-ARM101.usd")
         

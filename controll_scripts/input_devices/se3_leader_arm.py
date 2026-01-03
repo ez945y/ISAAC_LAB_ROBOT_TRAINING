@@ -106,15 +106,8 @@ class Se3LeaderArm(DeviceBase):
     def _init_leader_arm(self):
         """Initialize the leader arm input device."""
         try:
-            # Try to import from local path first
-            import sys
-            import os
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            robot_dir = os.path.dirname(script_dir)
-            if robot_dir not in sys.path:
-                sys.path.insert(0, robot_dir)
-            
-            from controll_scripts.input_devices.leader_arm import LeaderArmInputDevice
+            # Import using isaaclab_mimic.controll_scripts path
+            from isaaclab_mimic.controll_scripts.input_devices.leader_arm import LeaderArmInputDevice
             
             initial_pose = torch.tensor(
                 [0.25, 0.0, 0.15, 1.0, 0.0, 0.0, 0.0],
@@ -203,8 +196,8 @@ class Se3LeaderArm(DeviceBase):
                 - gripper command: Last element as binary (+1.0 open, -1.0 close)
         """
         if self._leader_arm is None:
-            # Return zero command (default to 7D for safety, environment will complain if mismatch)
-            return torch.zeros(7, dtype=torch.float32, device=self._sim_device)
+            # Return zero command - 6D for joint control (5 arm joints + 1 gripper)
+            return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
         
         # Check current mode
         if hasattr(self._leader_arm, 'data_mode') and self._leader_arm.data_mode == 'joint':
@@ -330,8 +323,8 @@ class Se3LeaderArm(DeviceBase):
         try:
             # Check if target_pose has expected shape
             if target_pose is None or target_pose.numel() < 7:
-                # Return zero command if no valid data
-                return torch.zeros(7, dtype=torch.float32, device=self._sim_device)
+                # Return zero command if no valid data - 6D for joint control
+                return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
             
             if target_pose.dim() == 2:
                 pose_np = target_pose[0].cpu().numpy()
@@ -339,12 +332,12 @@ class Se3LeaderArm(DeviceBase):
                 pose_np = target_pose.cpu().numpy()
             
             if pose_np.shape[0] < 7:
-                return torch.zeros(7, dtype=torch.float32, device=self._sim_device)
+                return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
                 
             curr_pos = pose_np[:3]
             curr_quat = pose_np[3:7]  # w, x, y, z
         except Exception:
-            return torch.zeros(7, dtype=torch.float32, device=self._sim_device)
+            return torch.zeros(6, dtype=torch.float32, device=self._sim_device)
         
         # Initialize on first valid reading
         if not self._initialized and self._leader_arm.is_connected:

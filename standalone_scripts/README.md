@@ -89,18 +89,18 @@ lerobot-teleoperate_port \
 python 06_teleoperate_demo.py
 ```
 
-### 07_lerobot_teleoperate.py - LeRobot Bridge (Leader Arm Sender)
+### 06_lerobot_teleoperate.py - LeRobot Bridge (Leader Arm Sender)
 This script acts as the bridge for the physical leader arm. It reads joint data from the hardware using the `LeRobot` library and streams it over a socket network.
 
 #### Installation (On Mac/Leader Arm Machine)
 To use this script, you must first install the `LeRobot` library:
 1. Clone the LeRobot repository: `git clone https://github.com/huggingface/lerobot.git`
 2. Install dependencies: `cd lerobot && pip install -e .`
-3. **Crucial Step**: Copy `07_lerobot_teleoperate.py` from this repository into your `lerobot` source folder or run it from this location ensuring the `lerobot` environment is active.
+3. **Crucial Step**: Copy `06_lerobot_teleoperate.py` from this repository into your `lerobot` source folder or run it from this location ensuring the `lerobot` environment is active.
 
 #### Usage
 ```bash
-python 07_lerobot_teleoperate.py \
+python 06_lerobot_teleoperate.py \
     --teleop.type=so101_leader \
     --teleop.port=/dev/tty.usbmodem5AA90244081 \
     --teleop.id=my_awesome_leader_arm
@@ -140,16 +140,18 @@ python 07_lerobot_teleoperate.py \
         ↓
 06_teleoperate_demo.py     (+Leader arm teleoperation)
         ↓
-07_lerobot_teleoperate.py  (+LeRobot bridge sender)
+06_teleoperate.py  (+LeRobot bridge sender)
+        ↓
+06_teleop_processors.py    (+LeRobot interface)
 ```
 
 ## Architecture
 
 The leader arm teleoperation system consists of two parts:
 
-1. **Leader Arm Sender** (`07_lerobot_teleoperate.py` on Mac)
+1. **Leader Arm Sender** (`06_lerobot_teleoperate.py` on Mac)
    - Requires `lerobot` library installed.
-   - Puts and rename teleoperate.py and teleop_processors.py in lerobot/scripts/ folder for 07 section to work. and register them on lerobot/pyproject.toml
+   - Puts and rename teleoperate.py and teleop_processors.py in lerobot/scripts/ folder for 06 section to work. and register them on lerobot/pyproject.toml
    - Connects to physical SO-101 leader arm via serial port.
    - Completes calibration of the leader arm.
    - Reads joint positions and normalizes them to [0, 1] range.
