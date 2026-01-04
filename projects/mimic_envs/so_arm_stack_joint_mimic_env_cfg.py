@@ -27,6 +27,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import FrameTransformerCfg, OffsetCfg
 from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
+from isaaclab.sensors import CameraCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
@@ -72,6 +73,27 @@ class SOArmSceneCfg(InteractiveSceneCfg):
     cube_2: RigidObjectCfg = MISSING
     # Cube 3: Green (second cube to pick and stack)
     cube_3: RigidObjectCfg = MISSING
+
+    # Cameras (Added to base scene as per refactoring request)
+    # Hand-mounted camera (Self View)
+    wrist_camera = CameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/gripper_link/self_view_camera",
+        update_period=0.1,
+        height=128,
+        width=128,
+        data_types=["rgb"],
+        spawn=None, 
+    )
+
+    # Fixed camera (Full View)
+    front_camera = CameraCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/full_view_camera", 
+        update_period=0.1,
+        height=128,
+        width=128,
+        data_types=["rgb"],
+        spawn=None, 
+    )
 
 
 ##

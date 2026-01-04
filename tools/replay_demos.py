@@ -151,6 +151,11 @@ def main():
     # create environment from loaded config
     env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
 
+    # Setup cameras if requested (using AppLauncher's enable_cameras arg)
+    if args_cli.enable_cameras:
+        from view_port import setup_camera_viewports
+        setup_camera_viewports(env_cfg, simulation_app)
+
     teleop_interface = Se3Keyboard(Se3KeyboardCfg(pos_sensitivity=0.1, rot_sensitivity=0.1))
     teleop_interface.add_callback("N", play_cb)
     teleop_interface.add_callback("B", pause_cb)

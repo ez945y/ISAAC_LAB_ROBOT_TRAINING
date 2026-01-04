@@ -17,6 +17,7 @@ tools/
 ├── teleoperate_port.py           # Leader arm sender (Mac side)
 ├── teleop_processors.py     # Teleoperation support module
 ├── convert_hdf5_to_lerobot.py  # HDF5 to LeRobot converter
+├── view_port.py                # Camera viewport visualization utility
 └── README.md
 ```
 
@@ -58,6 +59,37 @@ Data processing utilities for teleoperation. Used by `teleoperate_port.py`.
 
 ---
 
+### Data Recording
+
+#### record_demos.py
+
+Record new demonstrations using a teleop device. 
+Modified to support camera visualization during recording.
+
+**Usage:**
+```bash
+./isaaclab.sh -p scripts/tools/record_demos.py \
+    --task Isaac-PickPlace-SOArm-Joint-Mimic-v0 \
+    --teleop_device leader_arm \
+    --num_demos 10 \
+    --enable_cameras  # Optional: visualize camera feeds
+```
+
+### Data Replay
+
+#### replay_demos.py
+
+Replay recorded HDF5 demonstrations to verify correctness.
+Modified to support camera visualization during replay.
+
+**Usage:**
+```bash
+./isaaclab.sh -p scripts/tools/replay_demos.py \
+    --task Isaac-PickPlace-SOArm-Joint-Mimic-v0 \
+    --dataset_file ./datasets/so_arm_demos.hdf5 \
+    --enable_cameras  # Optional: visualize camera feeds
+```
+
 ### Data Regeneration
 
 #### regenerate_demos.py
@@ -72,7 +104,7 @@ Replays actions from an existing HDF5 dataset in a new environment configuration
     --task [Target Task Name] \
     --input_file [Source HDF5] \
     --output_file [Output HDF5] \
-    [--enable_cameras]
+    --enable_cameras  # Optional: visualize camera feeds
 ```
 
 ---

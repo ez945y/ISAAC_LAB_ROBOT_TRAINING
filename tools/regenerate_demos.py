@@ -11,12 +11,6 @@ import gymnasium as gym
 import torch
 
 from isaaclab.app import AppLauncher
-# from isaaclab.utils.datasets import EpisodeData, HDF5DatasetFileHandler <-- Moved down
-
-# NOTE: Late import for Isaac Lab modules that depend on Omniverse being launched
-# import isaaclab_mimic.envs  <-- Moved down
-# import isaaclab_tasks  <-- Moved down
-# from isaaclab_tasks.utils.parse_cfg import parse_env_cfg  <-- Moved down
 
 # Parse arguments
 parser = argparse.ArgumentParser(description="Regenerate demonstrations by replaying actions with new env config.")
@@ -35,8 +29,7 @@ if args_cli.enable_pinocchio:
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-# Import Isaac Lab modules after app launch
-from isaaclab.utils.datasets import EpisodeData, HDF5DatasetFileHandler # <-- Added back here
+from isaaclab.utils.datasets import EpisodeData, HDF5DatasetFileHandler
 import isaaclab_mimic.envs  # Register custom environments
 import isaaclab_tasks  # Register official tasks
 from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
@@ -64,9 +57,14 @@ def main():
     env_cfg.recorders = {} 
     env_cfg.terminations = {} 
 
-    # 3. Create Environment
+    # Create environment
     env = gym.make(env_name, cfg=env_cfg).unwrapped
     
+    # 3.5 Setup Visualization Viewports (Dynamic)
+    if args_cli.enable_cameras:
+        from view_port import setup_camera_viewports
+        setup_camera_viewports(env_cfg, simulation_app)
+
     # 4. Init Output Handler
     output_handler = HDF5DatasetFileHandler()
     output_handler.create(args_cli.output_file, env_name=env_name)
@@ -160,6 +158,9 @@ def main():
 
             if recorded_steps != total_steps:
                 print(f"Warning: Episode length mismatch. Src: {total_steps}, New: {recorded_steps}")
+
+            # Prepare data for export (stack lists into tensors)
+            new_episode_data.pre_export()
 
             # Export
             output_handler.write_episode(new_episode_data)

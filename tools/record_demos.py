@@ -574,6 +574,11 @@ def main() -> None:
     # Create environment
     env = create_environment(env_cfg)
 
+    # Setup cameras if requested
+    if args_cli.enable_cameras:
+        from view_port import setup_camera_viewports
+        setup_camera_viewports(env_cfg, simulation_app)
+
     # Run simulation loop
     current_recorded_demo_count = run_simulation_loop(env, None, success_term, rate_limiter)
 
