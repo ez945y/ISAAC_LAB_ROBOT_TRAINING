@@ -59,5 +59,5 @@ The episode will strictly check for:
 To use the `leader_arm` device, overwrite the default device factory with the provided modified version:
 
 ```bash
-cp /home/rst_spark/IsaacLab/source/isaaclab_mimic/robot/mimic_envs/teleop_device_factory_modified.py /home/rst_spark/IsaacLab/source/isaaclab/isaaclab/devices/teleop_device_factory.py
+cp /home/rst_spark/IsaacLab/source/isaaclab_mimic/robot/projects/mimic_envs/teleop_device_factory_modified.py /home/rst_spark/IsaacLab/source/isaaclab/isaaclab/devices/teleop_device_factory.py
 ```

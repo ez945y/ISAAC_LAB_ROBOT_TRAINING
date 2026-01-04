@@ -89,18 +89,21 @@ lerobot-teleoperate_port \
 python 06_teleoperate_demo.py
 ```
 
-### 06_lerobot_teleoperate.py - LeRobot Bridge (Leader Arm Sender)
+### 06_teleoperate.py - LeRobot Bridge (Leader Arm Sender)
+
+> **Note:** This script has been moved to `../tools/06_teleoperate.py`.
+
 This script acts as the bridge for the physical leader arm. It reads joint data from the hardware using the `LeRobot` library and streams it over a socket network.
 
 #### Installation (On Mac/Leader Arm Machine)
 To use this script, you must first install the `LeRobot` library:
 1. Clone the LeRobot repository: `git clone https://github.com/huggingface/lerobot.git`
 2. Install dependencies: `cd lerobot && pip install -e .`
-3. **Crucial Step**: Copy `06_lerobot_teleoperate.py` from this repository into your `lerobot` source folder or run it from this location ensuring the `lerobot` environment is active.
+3. **Crucial Step**: Copy `../tools/06_teleoperate.py` from this repository into your `lerobot` source folder or run it from this location ensuring the `lerobot` environment is active.
 
 #### Usage
 ```bash
-python 06_lerobot_teleoperate.py \
+python ../tools/06_teleoperate.py \
     --teleop.type=so101_leader \
     --teleop.port=/dev/tty.usbmodem5AA90244081 \
     --teleop.id=my_awesome_leader_arm
@@ -140,18 +143,18 @@ python 06_lerobot_teleoperate.py \
         ↓
 06_teleoperate_demo.py     (+Leader arm teleoperation)
         ↓
-06_teleoperate.py  (+LeRobot bridge sender)
+../tools/06_teleoperate.py  (+LeRobot bridge sender, moved to ../tools/)
         ↓
-06_teleop_processors.py    (+LeRobot interface)
+../tools/06_teleop_processors.py    (+LeRobot interface, moved to ../tools/)
 ```
 
 ## Architecture
 
 The leader arm teleoperation system consists of two parts:
 
-1. **Leader Arm Sender** (`06_lerobot_teleoperate.py` on Mac)
+1. **Leader Arm Sender** (`../tools/06_teleoperate.py` on Mac)
    - Requires `lerobot` library installed.
-   - Puts and rename teleoperate.py and teleop_processors.py in lerobot/scripts/ folder for 06 section to work. and register them on lerobot/pyproject.toml
+   - Copy `../tools/06_teleoperate.py` and `../tools/06_teleop_processors.py` to lerobot/scripts/ folder and register them in lerobot/pyproject.toml
    - Connects to physical SO-101 leader arm via serial port.
    - Completes calibration of the leader arm.
    - Reads joint positions and normalizes them to [0, 1] range.
@@ -166,14 +169,14 @@ The leader arm teleoperation system consists of two parts:
 
 **Step 1: Start simulator on Ubuntu (server mode)**
 ```bash
-cd ~/robot/standalone_scripts
+cd ~/robot/scripts
 python 06_teleoperate_demo.py
 ```
 
 **Step 2: Start leader arm on Mac (client mode)**
 ```bash
 # Ensure you are in the environment where lerobot is installed
-python teleoperate.py \
+python 06_teleoperate.py \
     --teleop.type=so101_leader \
     --teleop.port=/dev/tty.usbmodem5AA90244081 \
     --teleop.id=my_awesome_leader_arm \
@@ -184,7 +187,7 @@ python teleoperate.py \
 
 To also control a physical follower arm at the same time, add three more parameters:
 ```bash
-python teleoperate.py \
+python 06_teleoperate.py \
     --teleop.type=so101_leader \
     --teleop.port=/dev/tty.usbmodem5AA90244081 \
     --teleop.id=my_awesome_leader_arm \
@@ -198,7 +201,7 @@ python teleoperate.py \
 
 ```
 ┌─────────────────────────────┐      Socket (5359)      ┌─────────────────────┐
-│  07_lerobot_teleoperate.py  │  ──────────────────────▶│  06_teleoperate_    │
+│  ../tools/06_teleoperate.py│  ──────────────────────▶│  06_teleoperate_    │
 │  (Physical Leader Arm)      │  JSON: {mode: "joint",  │  demo.py            │
 │  Mac - Reads Joints         │   shoulder_pan: 0.5,    │  (Isaac Lab Sim)    │
 │                             │   shoulder_lift: 0.3,   │  Ubuntu             │
