@@ -100,17 +100,30 @@ class SocketClient:
         self.connected = False
 
     def connect(self):
-        """Connect to remote server."""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            logger.info(f"Connecting to {self.host}:{self.port}...")
-            self.socket.connect((self.host, self.port))
-            self.connected = True
-            logger.info(f"Connected to {self.host}:{self.port}")
-        except Exception as e:
-            logger.error(f"Failed to connect: {e}")
-            self.connected = False
-            raise
+        """Connect to remote server with retry loop."""
+        logger.info(f"Attempting to connect to {self.host}:{self.port}...")
+        
+        while not self.connected:
+            # Create a new socket for each attempt
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                self.socket.connect((self.host, self.port))
+                self.connected = True
+                print() # New line after status message
+                logger.info(f"Connected to {self.host}:{self.port}")
+            except (ConnectionRefusedError, OSError):
+                # Server likely not ready yet
+                self.socket.close()
+                self.socket = None
+                # Print status with return carriage to avoid spamming logs
+                print(f"\rWaiting for Isaac Lab server at {self.host}:{self.port}...", end="", flush=True)
+                time.sleep(1)
+            except Exception as e:
+                logger.error(f"Failed to connect: {e}")
+                if self.socket:
+                    self.socket.close()
+                self.connected = False
+                raise
 
     def send(self, data: dict):
         """Send data to server."""

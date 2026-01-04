@@ -63,5 +63,11 @@ class SOArmStackJointMimicEnv(ManagerBasedRLMimicEnv):
 
         signals = dict()
         subtask_terms = self.obs_buf["subtask_terms"]
-        signals["grasp_1"] = subtask_terms["grasp_1"][env_ids]
+        
+        # Dynamically retrieve all signals defined in Config 
+        # (Assuming keys in subtask_terms match keys in subtask_configs)
+        for subtask_name in self.cfg.subtask_configs.keys():
+            if subtask_name in subtask_terms:
+                signals[subtask_name] = subtask_terms[subtask_name][env_ids]
+                
         return signals

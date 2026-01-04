@@ -517,7 +517,7 @@ class SOArmStackJointMimicEnvCfg(ManagerBasedRLEnvCfg, MimicEnvCfg):
                 pos=(0.0, 0.0, 0.0),
                 joint_pos={
                     "shoulder_pan": 0.055,
-                    "shoulder_lift": -1.74,  # Clamped to limit (-1.745)
+                    "shoulder_lift": -1.65,  # Adjusted from -1.74 to avoid limit collision on reset
                     "elbow_flex": 1.665,
                     "wrist_flex": 1.233,
                     "wrist_roll": -0.077,
@@ -528,14 +528,14 @@ class SOArmStackJointMimicEnvCfg(ManagerBasedRLEnvCfg, MimicEnvCfg):
                 "arm": ImplicitActuatorCfg(
                     joint_names_expr=["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"],
                     effort_limit=50.0,
-                    stiffness=1000.0,
-                    damping=100.0,
+                    stiffness=None,
+                    damping=None,
                 ),
                 "gripper": ImplicitActuatorCfg(
                     joint_names_expr=["gripper"],
                     effort_limit=2.0,
-                    stiffness=100.0,
-                    damping=10.0,
+                    stiffness=None,
+                    damping=None,
                 ),
             },
         )
