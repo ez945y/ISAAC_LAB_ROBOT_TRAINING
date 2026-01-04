@@ -91,6 +91,21 @@ python robot/tools/convert_hdf5_to_lerobot.py \
     --robot-type so_arm
 ```
 
+### Step 5: Regenerate for Visual Training (Optional)
+
+If you want to train visual policies (e.g. using LeRobot with camera inputs), you can regenerate your demonstrations to include rendered images. This process replays the recorded actions in a new environment configuration with cameras.
+
+**Command:**
+```bash
+./isaaclab.sh -p scripts/tools/regenerate_demos.py \
+    --task Isaac-PickPlace-SOArm-Camera-Mimic-v0 \
+    --input_file ./datasets/so_arm_demos.hdf5 \
+    --output_file ./datasets/so_arm_demos_camera.hdf5 \
+    --enable_cameras
+```
+
+This will produce a new HDF5 file where `observations` contains flattened RGB image data from wrist and front cameras, replacing the ground-truth positions.
+
 ## Troubleshooting
 
 ### Environment Not Found Error

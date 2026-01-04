@@ -14,8 +14,8 @@ tools/
 │   │   └── SO-ARM101.usd       # Robot USD model
 │   ├── controllers/            # Robot controllers
 │   └── configs/                # Configuration files
-├── 06_teleoperate.py           # Leader arm sender (Mac side)
-├── 06_teleop_processors.py     # Teleoperation support module
+├── teleoperate_port.py           # Leader arm sender (Mac side)
+├── teleop_processors.py     # Teleoperation support module
 ├── convert_hdf5_to_lerobot.py  # HDF5 to LeRobot converter
 └── README.md
 ```
@@ -39,7 +39,7 @@ The `controll_scripts` directory contains the core robot control modules and ass
 
 ### Teleoperation (Real-to-Sim)
 
-#### 06_teleoperate.py (Mac/LeRobot Side)
+#### teleoperate_port.py (Mac/LeRobot Side)
 
 Reads joint positions from a physical leader arm using LeRobot and sends them over network.
 
@@ -49,12 +49,31 @@ Reads joint positions from a physical leader arm using LeRobot and sends them ov
 
 **Usage:**
 ```bash
-python 06_teleoperate.py
+python teleoperate_port.py
 ```
 
-#### 06_teleop_processors.py (Supporting Module)
+#### teleop_processors.py (Supporting Module)
 
-Data processing utilities for teleoperation. Used by `06_teleoperate.py`.
+Data processing utilities for teleoperation. Used by `teleoperate_port.py`.
+
+---
+
+### Data Regeneration
+
+#### regenerate_demos.py
+
+Replays actions from an existing HDF5 dataset in a new environment configuration and records new observations. This is useful for:
+- Tuning physics parameters (e.g., stiffness) without re-recording.
+- Generating visual observations (rendering images) from purely state-based recordings.
+
+**Usage:**
+```bash
+./isaaclab.sh -p scripts/tools/regenerate_demos.py \
+    --task [Target Task Name] \
+    --input_file [Source HDF5] \
+    --output_file [Output HDF5] \
+    [--enable_cameras]
+```
 
 ---
 
