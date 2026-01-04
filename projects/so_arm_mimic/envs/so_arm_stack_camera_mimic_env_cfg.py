@@ -16,47 +16,14 @@ import isaaclab.sim as sim_utils # For spawning PinholeCameraCfg
 from .so_arm_stack_joint_mimic_env_cfg import SOArmStackJointMimicEnvCfg, SOArmSceneCfg
 
 @configclass
-class SOArmCameraSceneCfg(SOArmSceneCfg):
-    """Configuration for the SO-ARM-101 scene with cameras."""
-
-    # Hand-mounted camera (Self View)
-    wrist_camera = CameraCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/gripper_link/self_view_camera",
-        update_period=0.1,
-        height=128,
-        width=128,
-        data_types=["rgb"],
-        spawn=None, # Assuming it already exists in USD as per user screenshot
-    )
-
-    # Fixed camera (Full View)
-    # The user screenshot shows "full_view_camera" in the tree. 
-    # Its location in the tree is ambiguous (looks like child of Robot or root).
-    # We will assume it exists in the USD at "{ENV_REGEX_NS}/Robot/full_view_camera" or similar.
-    # If it's pure logic camera, we can spawn it.
-    # To be safe and ensure it works even if not in USD, we should SPAWN it if we knew the pose.
-    # But user said "According to my two cameras", implying use the existing ones.
-    # Let's try to reference them from USD first.
-    
-    front_camera = CameraCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/full_view_camera", # Guessing path based on screenshot
-        update_period=0.1,
-        height=128,
-        width=128,
-        data_types=["rgb"],
-        spawn=None, 
-    )
-
-
-@configclass
 class SOArmStackCameraMimicEnvCfg(SOArmStackJointMimicEnvCfg):
     """
     SO-ARM-101 Stack Task with Camera Observations.
     Inherits from Joint Config but replaces observations.
     """
     
-    # Use the scene with cameras
-    scene: SOArmCameraSceneCfg = SOArmCameraSceneCfg(num_envs=1, env_spacing=2.5)
+    # Use the base scene which now includes cameras
+    scene: SOArmSceneCfg = SOArmSceneCfg(num_envs=1, env_spacing=2.5)
 
     def __post_init__(self):
         super().__post_init__()

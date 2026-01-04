@@ -14,5 +14,13 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["tools"]
 include = ["controll_scripts*"]
+
+[tool.setuptools.package-data]
+controll_scripts = [
+    "so_arm_101/*.usd",
+    "so_arm_101/*.yaml",
+    "so_arm_101/**/*.urdf",
+    "so_arm_101/**/*",
+]

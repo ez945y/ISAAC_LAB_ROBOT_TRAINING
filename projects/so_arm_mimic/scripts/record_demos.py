@@ -102,7 +102,8 @@ from isaaclab.devices import Se3Keyboard, Se3KeyboardCfg, Se3SpaceMouse, Se3Spac
 from isaaclab.devices.openxr import remove_camera_configs
 from isaaclab.devices.teleop_device_factory import create_teleop_device
 
-import isaaclab_mimic.envs  # noqa: F401
+import so_arm_mimic.envs  # Register custom SO-ARM environments
+from controll_scripts.input_devices.se3_leader_arm import Se3LeaderArm, Se3LeaderArmCfg
 from isaaclab_mimic.ui.instruction_display import InstructionDisplay, show_subtask_instructions
 
 if args_cli.enable_pinocchio:
@@ -274,7 +275,13 @@ def setup_teleop_device(callbacks: dict[str, Callable]) -> object:
     teleop_interface = None
     try:
         if hasattr(env_cfg, "teleop_devices") and args_cli.teleop_device in env_cfg.teleop_devices.devices:
-            teleop_interface = create_teleop_device(args_cli.teleop_device, env_cfg.teleop_devices.devices, callbacks)
+            device_cfg = env_cfg.teleop_devices.devices[args_cli.teleop_device]
+            if isinstance(device_cfg, Se3LeaderArmCfg):
+                teleop_interface = Se3LeaderArm(device_cfg)
+                for key, callback in callbacks.items():
+                    teleop_interface.add_callback(key, callback)
+            else:
+                teleop_interface = create_teleop_device(args_cli.teleop_device, env_cfg.teleop_devices.devices, callbacks)
         else:
             omni.log.warn(f"No teleop device '{args_cli.teleop_device}' found in environment config. Creating default.")
             # Create fallback teleop device
@@ -356,7 +363,7 @@ def process_success_condition(env: gym.Env, success_term: object | None, success
             
             # Reset the success logging state for next episode
             try:
-                from isaaclab_mimic.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
+                from so_arm_mimic.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
                 if hasattr(cubes_stacked_single_gripper, "_last_state"):
                     cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
             except ImportError:
@@ -397,7 +404,7 @@ def handle_reset(
     
     # Reset the success logging state to avoid duplicate messages
     try:
-        from isaaclab_mimic.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
+        from so_arm_mimic.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
         if hasattr(cubes_stacked_single_gripper, "_last_state"):
             cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
     except ImportError:

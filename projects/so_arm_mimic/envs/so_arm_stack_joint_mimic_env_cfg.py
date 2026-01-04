@@ -37,7 +37,7 @@ from isaaclab_tasks.manager_based.manipulation.stack.mdp import franka_stack_eve
 from isaaclab_tasks.manager_based.manipulation.stack.mdp.terminations import cubes_stacked
 
 # Import Se3LeaderArmCfg for teleop device registration
-from isaaclab_mimic.controll_scripts.input_devices.se3_leader_arm import Se3LeaderArmCfg
+from controll_scripts.input_devices.se3_leader_arm import Se3LeaderArmCfg
 
 
 ##
@@ -523,8 +523,9 @@ class SOArmStackJointMimicEnvCfg(ManagerBasedRLEnvCfg, MimicEnvCfg):
 
         # === Robot USD path ===
         # The USD file is in isaaclab_mimic/controll_scripts/so_arm_101/SO-ARM101.usd
-        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        usd_path = os.path.join(script_dir, "controll_scripts", "so_arm_101", "SO-ARM101.usd")
+        import controll_scripts
+        script_dir = os.path.dirname(os.path.abspath(controll_scripts.__file__))
+        usd_path = os.path.join(script_dir, "so_arm_101", "SO-ARM101.usd")
         
         # === Robot configuration ===
         self.scene.robot = ArticulationCfg(

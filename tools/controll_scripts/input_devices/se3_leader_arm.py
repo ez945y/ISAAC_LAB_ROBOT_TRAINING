@@ -111,7 +111,7 @@ class Se3LeaderArm(DeviceBase):
         """Initialize the leader arm input device."""
         try:
             # Import using isaaclab_mimic.controll_scripts path
-            from isaaclab_mimic.controll_scripts.input_devices.leader_arm import LeaderArmInputDevice
+            from controll_scripts.input_devices.leader_arm import LeaderArmInputDevice
             
             initial_pose = torch.tensor(
                 [0.25, 0.0, 0.15, 1.0, 0.0, 0.0, 0.0],

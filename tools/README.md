@@ -1,6 +1,6 @@
 # Robot Tools
 
-This directory contains utility scripts for working with robot data, models, and teleoperation.
+This directory contains utility scripts and assets for working with robot data, models, and teleoperation.
 
 ## Directory Structure
 
@@ -14,161 +14,27 @@ tools/
 │   │   └── SO-ARM101.usd       # Robot USD model
 │   ├── controllers/            # Robot controllers
 │   └── configs/                # Configuration files
-├── teleoperate_port.py           # Leader arm sender (Mac side)
-├── teleop_processors.py     # Teleoperation support module
-├── convert_hdf5_to_lerobot.py  # HDF5 to LeRobot converter
-├── view_port.py                # Camera viewport visualization utility
+├── contoller_client/   
+│   ├── teleoperate_port.py     # Leader arm sender (Mac side)
+│   ├── teleop_processors.py    # Teleoperation support module
 └── README.md
 ```
 
 ## controll_scripts
 
-The `controll_scripts` directory contains the core robot control modules and assets:
+The `controll_scripts` directory contains shared robot control modules and assets. 
+This directory is symlinked to `isaaclab_mimic/isaaclab_mimic/controll_scripts`, allowing imports like:
 
-- **input_devices/**: Device implementations for teleoperation
-  - `se3_leader_arm.py`: Isaac Lab `DeviceBase` compatible wrapper for leader arm
-  - `leader_arm.py`: Base implementation for reading physical leader arm data
-  
-- **so_arm_101/**: SO-ARM-101 robot model and configurations
-  - `SO-ARM101.usd`: The robot's USD model file used in Isaac Sim
+```python
+from isaaclab_mimic.controll_scripts.input_devices.se3_leader_arm import Se3LeaderArm
+```
 
-**Note:** This directory is symlinked to `isaaclab_mimic/isaaclab_mimic/controll_scripts` to enable imports like `from isaaclab_mimic.controll_scripts.input_devices import Se3LeaderArm`.
+This ensures these assets are accessible to all projects.
 
----
+## Teleoperation Client (For Mac/LeRobot Side)
 
-## Scripts
+Scripts in `contoller_client/` are for the workstation connected to the physical leader arm.
 
-### Teleoperation (Real-to-Sim)
-
-#### teleoperate_port.py (Mac/LeRobot Side)
+### teleoperate_port.py
 
 Reads joint positions from a physical leader arm using LeRobot and sends them over network.
-
-**Requirements:**
-- macOS with LeRobot installed
-- Physical SO-ARM leader arm connected
-
-**Usage:**
-```bash
-python teleoperate_port.py
-```
-
-#### teleop_processors.py (Supporting Module)
-
-Data processing utilities for teleoperation. Used by `teleoperate_port.py`.
-
----
-
-### Data Recording
-
-#### record_demos.py
-
-Record new demonstrations using a teleop device. 
-Modified to support camera visualization during recording.
-
-**Usage:**
-```bash
-./isaaclab.sh -p scripts/tools/record_demos.py \
-    --task Isaac-PickPlace-SOArm-Joint-Mimic-v0 \
-    --teleop_device leader_arm \
-    --num_demos 10 \
-    --enable_cameras  # Optional: visualize camera feeds
-```
-
-### Data Replay
-
-#### replay_demos.py
-
-Replay recorded HDF5 demonstrations to verify correctness.
-Modified to support camera visualization during replay.
-
-**Usage:**
-```bash
-./isaaclab.sh -p scripts/tools/replay_demos.py \
-    --task Isaac-PickPlace-SOArm-Joint-Mimic-v0 \
-    --dataset_file ./datasets/so_arm_demos.hdf5 \
-    --enable_cameras  # Optional: visualize camera feeds
-```
-
-### Data Regeneration
-
-#### regenerate_demos.py
-
-Replays actions from an existing HDF5 dataset in a new environment configuration and records new observations. This is useful for:
-- Tuning physics parameters (e.g., stiffness) without re-recording.
-- Generating visual observations (rendering images) from purely state-based recordings.
-
-**Usage:**
-```bash
-./isaaclab.sh -p scripts/tools/regenerate_demos.py \
-    --task [Target Task Name] \
-    --input_file [Source HDF5] \
-    --output_file [Output HDF5] \
-    --enable_cameras  # Optional: visualize camera feeds
-```
-
----
-
-### Data Conversion
-
-#### convert_hdf5_to_lerobot.py
-
-Converts Isaac Lab HDF5 demonstration files to LeRobot dataset format for training imitation learning models.
-
-#### Requirements
-
-```bash
-pip install h5py numpy
-pip install lerobot  # Optional, for full LeRobot format support
-```
-
-#### Usage
-
-```bash
-# Basic conversion (SO-ARM robot)
-python convert_hdf5_to_lerobot.py \
-    --input ./datasets/so_arm_demos.hdf5 \
-    --output ./lerobot_datasets/so_arm_stack \
-    --robot-type so_arm \
-    --fps 30
-
-# Explore HDF5 structure without converting
-python convert_hdf5_to_lerobot.py --input ./datasets/so_arm_demos.hdf5 --explore-only
-
-# Output simple numpy format (if LeRobot not installed)
-python convert_hdf5_to_lerobot.py \
-    --input ./datasets/so_arm_demos.hdf5 \
-    --output ./numpy_data \
-    --simple-format
-
-# Push to Hugging Face Hub
-python convert_hdf5_to_lerobot.py \
-    --input ./datasets/so_arm_demos.hdf5 \
-    --output ./lerobot_datasets/so_arm_stack \
-    --repo-id your_username/so_arm_stack_sim \
-    --push-to-hub
-```
-
-#### Supported Robot Types
-
-- `so_arm`: SO-ARM-101 (6 DOF: 5 arm joints + 1 gripper)
-- `franka`: Franka Emika Panda (9 DOF: 7 arm joints + 2 fingers)
-- `generic`: Auto-detect dimensions from data
-
-#### Output Formats
-
-1. **LeRobot Format** (default): Full LeRobot dataset compatible with ACT, Diffusion Policy, etc.
-2. **Simple Format** (`--simple-format`): NumPy arrays for custom training pipelines.
-
-#### Data Mapping
-
-| Isaac Lab Key | LeRobot Key | Description |
-|---------------|-------------|-------------|
-| `observations/policy/joint_pos` | `observation.state` | Robot joint positions |
-| `actions` | `action` | Control commands (joint positions) |
-
-#### Notes
-
-- Ensure your Isaac Lab `ObservationsCfg` outputs raw physical units (radians, meters) for best compatibility.
-- LeRobot will automatically compute normalization statistics during training.
-- If using image observations, additional configuration is needed (see LeRobot documentation).

@@ -19,7 +19,7 @@ Follow the [Isaac Lab Installation Guide](https://isaac-sim.github.io/IsaacLab/m
 Run the following command from this directory:
 
 ```bash
-cd rl_manager_a1_navigation
+cd projects/rl_manager_a1_navigation
 python -m pip install -e source/rl_manager_a1_navigation
 ```
 

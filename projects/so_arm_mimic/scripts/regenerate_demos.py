@@ -30,7 +30,7 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 from isaaclab.utils.datasets import EpisodeData, HDF5DatasetFileHandler
-import isaaclab_mimic.envs  # Register custom environments
+import so_arm_mimic.envs  # Register custom environments
 import isaaclab_tasks  # Register official tasks
 from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 
