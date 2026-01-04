@@ -103,6 +103,10 @@ class Se3LeaderArm(DeviceBase):
         # Callbacks
         self._additional_callbacks: dict[str, Callable] = {}
         
+        # Connection state tracking for auto-reset on disconnect->reconnect
+        self._was_connected = False
+        self._pending_reset = False
+        
     def _init_leader_arm(self):
         """Initialize the leader arm input device."""
         try:
@@ -195,13 +199,31 @@ class Se3LeaderArm(DeviceBase):
                 - delta pose: First 6 elements as [dx, dy, dz, drx, dry, drz]
                 - gripper command: Last element as binary (+1.0 open, -1.0 close)
         """
-        if self._leader_arm is None or not self.is_connected:
-            # Return default pose (curled up) instead of zeros or 0.5 defaults
-            # Corresponds to init_state in env cfg:
-            # J0: 0.055, J1: -1.74, J2: 1.665, J3: 1.233, J4: -0.077, Gripper: -0.17 (Closed)
+        # Check connection status and handle disconnect -> reconnect -> reset
+        currently_connected = self._leader_arm is not None and self.is_connected
+        
+        if self._was_connected and not currently_connected:
+            # Connection was lost! Mark as disconnected but don't reset yet
+            print("\n>> [DISCONNECT] Leader arm disconnected! Reconnect to reset and start new episode...")
+            self._pending_reset = True
+            self._was_connected = False
+        
+        if not currently_connected:
+            # Return default pose (curled up) while waiting for reconnect
             default_pose = torch.tensor([0.055, -1.74, 1.665, 1.233, -0.077, -0.17], 
                                       dtype=torch.float32, device=self._sim_device)
             return default_pose
+        
+        # Check for reconnection after disconnect
+        if getattr(self, '_pending_reset', False) and currently_connected:
+            # Just reconnected! Now trigger reset
+            print(">> [RECONNECT] Leader arm reconnected! Triggering reset...")
+            if "R" in self._additional_callbacks:
+                self._additional_callbacks["R"]()
+            self._pending_reset = False
+        
+        # Update connection state
+        self._was_connected = True
         
         # Check current mode
         if hasattr(self._leader_arm, 'data_mode') and self._leader_arm.data_mode == 'joint':
@@ -289,25 +311,25 @@ class Se3LeaderArm(DeviceBase):
             
             sim_gripper = self.gripper_lower + gripper_pos * (self.gripper_upper - self.gripper_lower)
             
-            # Debug Print (Table Format)
-            if not hasattr(self, "_debug_print_counter"):
-                self._debug_print_counter = 0
-            self._debug_print_counter += 1
-            if self._debug_print_counter % 30 == 0:
-                print(f"\n{'-'*35} LEADER ARM STATUS {'-'*35}")
-                header = f"{'Joint Id':<10} {'Norm (In)':>12} {'Target (Rad)':>15} {'Limits':>22}"
-                print(header)
-                print('-' * len(header))
-                
-                # Arm Joints
-                for i in range(5):
-                    lim_str = f'{self.arm_lower[i]:.2f} / {self.arm_upper[i]:.2f}'
-                    print(f'Joint {i:<4} {ordered_joints[i]:12.2f} {scaled_joints[i]:15.3f} {lim_str:>22}')
-                
-                # Gripper
-                grip_lim = f'{self.gripper_lower:.2f} / {self.gripper_upper:.2f}'
-                print(f'Gripper    {gripper_pos:12.2f} {sim_gripper:15.3f} {grip_lim:>22}')
-                print('-' * 80)
+            # Debug Print (Table Format) - Commented out for cleaner output
+            # if not hasattr(self, "_debug_print_counter"):
+            #     self._debug_print_counter = 0
+            # self._debug_print_counter += 1
+            # if self._debug_print_counter % 30 == 0:
+            #     print(f"\n{'-'*35} LEADER ARM STATUS {'-'*35}")
+            #     header = f"{'Joint Id':<10} {'Norm (In)':>12} {'Target (Rad)':>15} {'Limits':>22}"
+            #     print(header)
+            #     print('-' * len(header))
+            #     
+            #     # Arm Joints
+            #     for i in range(5):
+            #         lim_str = f'{self.arm_lower[i]:.2f} / {self.arm_upper[i]:.2f}'
+            #         print(f'Joint {i:<4} {ordered_joints[i]:12.2f} {scaled_joints[i]:15.3f} {lim_str:>22}')
+            #     
+            #     # Gripper
+            #     grip_lim = f'{self.gripper_lower:.2f} / {self.gripper_upper:.2f}'
+            #     print(f'Gripper    {gripper_pos:12.2f} {sim_gripper:15.3f} {grip_lim:>22}')
+            #     print('-' * 80)
             
             command = torch.cat([scaled_joints, torch.tensor([sim_gripper], device=self._sim_device)])
             return command

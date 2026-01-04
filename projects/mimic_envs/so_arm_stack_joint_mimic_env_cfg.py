@@ -330,20 +330,19 @@ def cubes_stacked_single_gripper(
 
     # Logging for user feedback (using function attribute to store state)
     if not hasattr(cubes_stacked_single_gripper, "_last_state"):
-        cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False}
+        cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
     
     # Check current state for environment 0 (assuming single env for demo recording)
     is_stack_1 = stack_1_ok[0].item()
     is_stack_2 = stack_2_ok[0].item()
     is_success = success[0].item()
 
-    # Reset state if completely failed or just started
+    # Reset state if stack broken
     if not is_stack_1 and cubes_stacked_single_gripper._last_state["stack_1"]:
          print(">> [INFO] Stack 1 (Red on Blue) broken!", flush=True)
-         cubes_stacked_single_gripper._last_state["stack_1"] = False
-         cubes_stacked_single_gripper._last_state["stack_2"] = False
+         cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
 
-    # Print logs on state change
+    # Print logs on state change only
     if is_stack_1 and not cubes_stacked_single_gripper._last_state["stack_1"]:
         print("\n>> [SUCCESS] Step 1 Complete: Red Cube stacked on Blue Cube!", flush=True)
         cubes_stacked_single_gripper._last_state["stack_1"] = True
@@ -354,10 +353,13 @@ def cubes_stacked_single_gripper(
             print(">> [ACTION] Now OPEN the gripper to finish!", flush=True)
         cubes_stacked_single_gripper._last_state["stack_2"] = True
 
-    if is_success:
+    # Only print complete message once
+    if is_success and not cubes_stacked_single_gripper._last_state["complete"]:
         print(">> [COMPLETE] Task Finished! Resetting environment...\n", flush=True)
-        # Reset state for next episode
-        cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False}
+        cubes_stacked_single_gripper._last_state["complete"] = True
+
+    # Reset state after success is processed (will happen on next episode via env reset)
+    # Note: The actual state reset happens when the environment resets
 
     return success
 
