@@ -151,29 +151,137 @@ def gripper_pos(env) -> torch.Tensor:
     """Gripper joint position."""
     return env.scene["robot"].data.joint_pos[:, -1:]
 
-# Subtask signals for stack task
+# ==============================================================================
+# Subtask signals for stack task - Core computation helpers
+# ==============================================================================
+
+# State tracking for logging
+_grasp_state = {"cube_2": False, "cube_3": False}
+_stack_state = {"stack_1": False}
+
+def reset_subtask_logging_state():
+    """Reset the logging state for subtask signals. Call this at the start of each episode."""
+    global _grasp_state, _stack_state
+    _grasp_state = {"cube_2": False, "cube_3": False}
+    _stack_state = {"stack_1": False}
+    # Also reset cubes_stacked_single_gripper state
+    if hasattr(cubes_stacked_single_gripper, "_last_state"):
+        cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
+
+
+def _get_gripper_state(env, robot_cfg: SceneEntityCfg) -> tuple[torch.Tensor, float, float]:
+    """Get gripper state and configuration values.
+    
+    Returns:
+        tuple: (gripper_joint_pos, gripper_open_val, gripper_threshold)
+    """
+    gripper_state = env.scene[robot_cfg.name].data.joint_pos[:, -1]
+    gripper_open_val = getattr(env.cfg, 'gripper_open_val', 1.75)
+    gripper_threshold = getattr(env.cfg, 'gripper_threshold', 0.1)
+    return gripper_state, gripper_open_val, gripper_threshold
+
+
+def _compute_grasp_distance(env, ee_frame_cfg: SceneEntityCfg, object_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Compute distance between end-effector and object.
+    
+    Returns:
+        torch.Tensor: Distance in meters (shape: [num_envs])
+    """
+    ee_pos = env.scene[ee_frame_cfg.name].data.target_pos_w[..., 0, :]
+    obj_pos = env.scene[object_cfg.name].data.root_pos_w
+    return torch.linalg.vector_norm(obj_pos - ee_pos, dim=1)
+
+
+def _compute_stack_distances(
+    env, 
+    upper_object_cfg: SceneEntityCfg, 
+    lower_object_cfg: SceneEntityCfg
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Compute stacking distances between two objects.
+    
+    Returns:
+        tuple: (xy_dist, height_dist, pos_diff_z) where:
+            - xy_dist: horizontal distance (shape: [num_envs])
+            - height_dist: absolute vertical distance (shape: [num_envs])
+            - pos_diff_z: signed vertical difference (upper - lower), negative means upper is above
+    """
+    upper_object = env.scene[upper_object_cfg.name]
+    lower_object = env.scene[lower_object_cfg.name]
+    
+    pos_diff = upper_object.data.root_pos_w - lower_object.data.root_pos_w
+    height_dist = torch.abs(pos_diff[:, 2])
+    xy_dist = torch.linalg.vector_norm(pos_diff[:, :2], dim=1)
+    
+    # pos_diff[:, 2] > 0 means upper object is above lower object
+    return xy_dist, height_dist, pos_diff[:, 2]
+
+
+def _check_stacked_geometry(
+    xy_dist: torch.Tensor, 
+    height_dist: torch.Tensor, 
+    pos_diff_z: torch.Tensor,
+    xy_threshold: float, 
+    height_threshold: float, 
+    height_diff: float,
+    check_direction: bool = True
+) -> torch.Tensor:
+    """Check if objects are geometrically stacked.
+    
+    Args:
+        check_direction: If True, also verify upper object is above lower object.
+    
+    Returns:
+        torch.Tensor: Boolean tensor indicating stacked state (shape: [num_envs])
+    """
+    stacked = torch.logical_and(
+        xy_dist < xy_threshold, 
+        # Single-direction check: height must be at least height_diff (like official version)
+        (height_dist - height_diff) < height_threshold
+    )
+    if check_direction:
+        # pos_diff_z > 0 means upper object is above lower object (since we compute upper - lower)
+        stacked = torch.logical_and(pos_diff_z > 0.0, stacked)
+    return stacked
+
+
+# ==============================================================================
+# Subtask signal functions (for observations/annotations)
+# ==============================================================================
+
 def object_grasped(
     env, 
     robot_cfg: SceneEntityCfg, 
     ee_frame_cfg: SceneEntityCfg, 
     object_cfg: SceneEntityCfg,
-    diff_threshold: float = 0.12,
+    diff_threshold: float = 0.12,  # 6cm, same as official version
 ) -> torch.Tensor:
     """Check if object is grasped (close to EE and gripper closed)."""
-    ee_pos = env.scene[ee_frame_cfg.name].data.target_pos_w[..., 0, :]
-    obj_pos = env.scene[object_cfg.name].data.root_pos_w
+    global _grasp_state
     
-    pose_diff = torch.linalg.vector_norm(obj_pos - ee_pos, dim=1)
+    # Use helper functions
+    pose_diff = _compute_grasp_distance(env, ee_frame_cfg, object_cfg)
+    gripper_state, gripper_open_val, gripper_threshold = _get_gripper_state(env, robot_cfg)
     
-    # Gripper state - check if gripper is not fully open
-    gripper_state = env.scene[robot_cfg.name].data.joint_pos[:, -1]
-    gripper_open_val = getattr(env.cfg, 'gripper_open_val', 1.75)
-    gripper_threshold = getattr(env.cfg, 'gripper_threshold', 1.2)
+    # Check if gripper is closed (not fully open)
     is_gripping = torch.abs(gripper_state - gripper_open_val) > gripper_threshold
-    
     grasped = torch.logical_and(pose_diff < diff_threshold, is_gripping)
-    # print("is_gripping: ", is_gripping, "pose_diff: ", pose_diff, "diff_threshold: ", diff_threshold, "grasped: ", grasped)
+    
+    # Logging: print when grasp state changes
+    obj_name = object_cfg.name
+    is_grasped_now = grasped[0].item() if grasped.numel() > 0 else False
+    if obj_name in _grasp_state:
+        if is_grasped_now and not _grasp_state[obj_name]:
+            cube_color = "Red" if obj_name == "cube_2" else "Green"
+            signal_name = "grasp_1" if obj_name == "cube_2" else "grasp_2"
+            print(f">> [SUBTASK] {signal_name}: {cube_color} cube GRASPED (pose_diff={pose_diff[0].item():.3f}m)", flush=True)
+        elif not is_grasped_now and _grasp_state[obj_name]:
+            cube_color = "Red" if obj_name == "cube_2" else "Green"
+            signal_name = "grasp_1" if obj_name == "cube_2" else "grasp_2"
+            print(f">> [SUBTASK] {signal_name}: {cube_color} cube RELEASED", flush=True)
+        _grasp_state[obj_name] = is_grasped_now
+    
     return grasped.float().unsqueeze(-1)
+
 
 def object_stacked(
     env,
@@ -182,25 +290,41 @@ def object_stacked(
     lower_object_cfg: SceneEntityCfg,
     xy_threshold: float = 0.05,
     height_threshold: float = 0.01,
-    height_diff: float = 0.04,  # Cube size (5cm)
+    height_diff: float = 0.039,
 ) -> torch.Tensor:
-    """Check if upper cube is stacked on lower cube."""
-    upper_object = env.scene[upper_object_cfg.name]
-    lower_object = env.scene[lower_object_cfg.name]
+    """Check if upper cube is stacked on lower cube (used for subtask annotation)."""
+    global _stack_state
     
-    pos_diff = upper_object.data.root_pos_w - lower_object.data.root_pos_w
-    height_dist = torch.abs(pos_diff[:, 2])  # Z difference
-    xy_dist = torch.linalg.vector_norm(pos_diff[:, :2], dim=1)
+    # Use helper functions
+    xy_dist, height_dist, pos_diff_z = _compute_stack_distances(env, upper_object_cfg, lower_object_cfg)
+    stacked = _check_stacked_geometry(
+        xy_dist, height_dist, pos_diff_z, 
+        xy_threshold, height_threshold, height_diff,
+        check_direction=False  # Don't check direction for subtask signal
+    )
     
-    stacked = torch.logical_and(xy_dist < xy_threshold, torch.abs(height_dist - height_diff) < height_threshold)
-    
-    # Also check gripper is open (released the cube)
-    gripper_state = env.scene[robot_cfg.name].data.joint_pos[:, -1]
-    gripper_open_val = getattr(env.cfg, 'gripper_open_val', 1.75)
-    is_open = torch.abs(gripper_state - gripper_open_val) < 1.2
-    
+    # Also check gripper is open (released the cube) for subtask completion
+    # Using isclose for stricter check like official version (for single gripper)
+    gripper_state, gripper_open_val, _ = _get_gripper_state(env, robot_cfg)
+    is_open = torch.isclose(
+        gripper_state,
+        torch.tensor(gripper_open_val, dtype=torch.float32, device=gripper_state.device),
+        atol=1.0,  # Relaxed for single gripper (SO-ARM opens to ~1.5-1.8 range)
+        rtol=1e-4,
+    )
     stacked = torch.logical_and(stacked, is_open)
+    
+    # Logging: print when stack state changes (only for stack_1: Red on Blue)
+    if upper_object_cfg.name == "cube_2" and lower_object_cfg.name == "cube_1":
+        is_stacked_now = stacked[0].item() if stacked.numel() > 0 else False
+        if is_stacked_now and not _stack_state["stack_1"]:
+            print(f">> [SUBTASK] stack_1: Red cube STACKED on Blue (xy={xy_dist[0].item():.3f}m, h={height_dist[0].item():.3f}m)", flush=True)
+        elif not is_stacked_now and _stack_state["stack_1"]:
+            print(f">> [SUBTASK] stack_1: Stack BROKEN (xy={xy_dist[0].item():.3f}m, h={height_dist[0].item():.3f}m)", flush=True)
+        _stack_state["stack_1"] = is_stacked_now
+    
     return stacked.float().unsqueeze(-1)
+
 
 
 ##
@@ -307,47 +431,42 @@ def cubes_stacked_single_gripper(
     cube_1_cfg: SceneEntityCfg = SceneEntityCfg("cube_1"),
     cube_2_cfg: SceneEntityCfg = SceneEntityCfg("cube_2"),
     cube_3_cfg: SceneEntityCfg = SceneEntityCfg("cube_3"),
-    xy_threshold: float = 0.06,  # Relaxed to 6cm
-    height_threshold: float = 0.015,  # Relaxed to 1.5cm for easier stacking
-    height_diff: float = 0.0374,  # Cube size (0.8 * 0.0468)
+    xy_threshold: float = 0.05,
+    height_threshold: float = 0.01,
+    height_diff: float = 0.04,  # Cube size (0.8 * 0.05)
 ) -> torch.Tensor:
-    """Success: All cubes are stacked AND gripper is open (for single gripper robots like SO-ARM)."""
+    """Success: All cubes are stacked AND gripper is open (for single gripper robots like SO-ARM).
     
-    robot: Articulation = env.scene[robot_cfg.name]
-    cube_1: RigidObject = env.scene[cube_1_cfg.name]
-    cube_2: RigidObject = env.scene[cube_2_cfg.name]
-    cube_3: RigidObject = env.scene[cube_3_cfg.name]
-
-    pos_diff_c12 = cube_1.data.root_pos_w - cube_2.data.root_pos_w
-    pos_diff_c23 = cube_2.data.root_pos_w - cube_3.data.root_pos_w
-
-    # Compute cube position difference in x-y plane
-    xy_dist_c12 = torch.norm(pos_diff_c12[:, :2], dim=1)
-    xy_dist_c23 = torch.norm(pos_diff_c23[:, :2], dim=1)
-
-    # Compute cube height difference
-    h_dist_c12 = torch.norm(pos_diff_c12[:, 2:], dim=1)
-    h_dist_c23 = torch.norm(pos_diff_c23[:, 2:], dim=1)
-
-    # Compute stacking conditions
-    stack_1_ok = torch.logical_and(xy_dist_c12 < xy_threshold, torch.abs(h_dist_c12 - height_diff) < height_threshold)
-    stack_1_ok = torch.logical_and(pos_diff_c12[:, 2] < 0.0, stack_1_ok)  # cube_2 is above cube_1
+    Uses the shared helper functions for computing stacking state.
+    """
     
-    stack_2_ok = torch.logical_and(xy_dist_c23 < xy_threshold, torch.abs(h_dist_c23 - height_diff) < height_threshold)
-    stack_2_ok = torch.logical_and(pos_diff_c23[:, 2] < 0.0, stack_2_ok)  # cube_3 is above cube_2
+    # Use helper functions for stack computations
+    # Stack 1: cube_2 (Red) on cube_1 (Blue)
+    xy_dist_c12, h_dist_c12, pos_diff_z_c12 = _compute_stack_distances(env, cube_2_cfg, cube_1_cfg)
+    stack_1_ok = _check_stacked_geometry(
+        xy_dist_c12, h_dist_c12, pos_diff_z_c12,
+        xy_threshold, height_threshold, height_diff,
+        check_direction=True  # Ensure cube_2 is above cube_1
+    )
 
-    # Check gripper is open (single gripper for SO-ARM)
-    gripper_is_open = torch.tensor([True], device=env.device)
-    if hasattr(env.cfg, "gripper_joint_names"):
-        gripper_joint_ids, _ = robot.find_joints(env.cfg.gripper_joint_names)
-        gripper_open_val = getattr(env.cfg, 'gripper_open_val', 1.75)
-        gripper_threshold = getattr(env.cfg, 'gripper_threshold', 0.3)
-        
-        # For single gripper, checked against first joint
-        gripper_pos = robot.data.joint_pos[:, gripper_joint_ids[0]]
-        gripper_is_open = torch.abs(gripper_pos - gripper_open_val) < gripper_threshold
+    # Stack 2: cube_3 (Green) on cube_2 (Red)
+    xy_dist_c23, h_dist_c23, pos_diff_z_c23 = _compute_stack_distances(env, cube_3_cfg, cube_2_cfg)
+    stack_2_ok = _check_stacked_geometry(
+        xy_dist_c23, h_dist_c23, pos_diff_z_c23,
+        xy_threshold, height_threshold, height_diff,
+        check_direction=True  # Ensure cube_3 is above cube_2
+    )
 
-    # Overall success
+    # Check gripper is open using helper (using isclose for consistency with object_stacked)
+    gripper_state, gripper_open_val, _ = _get_gripper_state(env, robot_cfg)
+    gripper_is_open = torch.isclose(
+        gripper_state,
+        torch.tensor(gripper_open_val, dtype=torch.float32, device=gripper_state.device),
+        atol=1.0,  # Relaxed for single gripper (SO-ARM opens to ~1.5-1.8 range)
+        rtol=1e-4,
+    )
+
+    # Overall success: both stacks OK and gripper open
     stacked = torch.logical_and(stack_1_ok, stack_2_ok)
     success = torch.logical_and(stacked, gripper_is_open)
 
@@ -380,9 +499,6 @@ def cubes_stacked_single_gripper(
     if is_success and not cubes_stacked_single_gripper._last_state["complete"]:
         print(">> [COMPLETE] Task Finished! Resetting environment...\n", flush=True)
         cubes_stacked_single_gripper._last_state["complete"] = True
-
-    # Reset state after success is processed (will happen on next episode via env reset)
-    # Note: The actual state reset happens when the environment resets
 
     return success
 

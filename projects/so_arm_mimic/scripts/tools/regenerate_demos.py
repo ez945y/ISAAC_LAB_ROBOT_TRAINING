@@ -31,6 +31,7 @@ simulation_app = app_launcher.app
 
 from isaaclab.utils.datasets import EpisodeData, HDF5DatasetFileHandler
 import so_arm_mimic  # Register custom environments
+from so_arm_mimic.source.envs.so_arm_stack_joint_mimic_env_cfg import reset_subtask_logging_state
 import isaaclab_tasks  # Register official tasks
 from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 
@@ -107,6 +108,9 @@ def main():
             env_ids = torch.tensor([0], device=env.device)
             # Use reset_to to force physics state
             env.reset_to(initial_state, env_ids, is_relative=True)
+            
+            # --- Reset Subtask Logging State (for clean logs per episode) ---
+            reset_subtask_logging_state()
             
             # --- Reset Managers (Important for clean state) ---
             if hasattr(env, "action_manager"):
