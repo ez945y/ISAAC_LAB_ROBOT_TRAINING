@@ -11,8 +11,8 @@ import os
 
 def main():
     parser = argparse.ArgumentParser(description="Delete specific episodes from HDF5 dataset by index.")
-    parser.add_argument("-i", "--input", required=True, help="Input HDF5 file path")
-    parser.add_argument("-o", "--output", required=True, help="Output HDF5 file path")
+    parser.add_argument("-i", "--input_file", required=True, help="Input HDF5 file path")
+    parser.add_argument("-o", "--output_file", required=True, help="Output HDF5 file path")
     # Receive only numbers here
     parser.add_argument("-d", "--delete_nums", nargs="+", required=True, help="Episode numbers to delete (e.g., 1 3 5)")
 
@@ -21,11 +21,11 @@ def main():
     # Automatically prefix with 'demo_'
     delete_ids = [f"demo_{n}" for n in args.delete_nums]
 
-    if not os.path.exists(args.input):
-        print(f"Error: File {args.input} not found.")
+    if not os.path.exists(args.input_file):
+        print(f"Error: File {args.input_file} not found.")
         return
 
-    with h5py.File(args.input, "r") as src, h5py.File(args.output, "w") as dst:
+    with h5py.File(args.input_file, "r") as src, h5py.File(args.output_file, "w") as dst:
         # Create 'data' group and copy attributes (crucial for Isaac Lab env_args)
         data_group = dst.create_group("data")
         if "data" in src:

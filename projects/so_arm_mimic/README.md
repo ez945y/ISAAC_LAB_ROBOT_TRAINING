@@ -13,15 +13,18 @@ pip install -e .
 
 ```
 so_arm_mimic/
+├── datasets/                   # Demonstration datasets
 ├── scripts/                    # Utility scripts
-│   ├── record_demos.py         # Data recording
-│   ├── replay_demos.py         # Data replay
-│   ├── regenerate_demos.py     # Data regeneration (visual)
-│   ├── convert_hdf5_to_lerobot.py # Format conversion
-│   └── view_port.py            # Camera utility
-├── so_arm_mimic/               # Source package
+│   ├── tools/                      # Utility tools
+│   │   ├── record_demos.py         # Data recording
+│   │   ├── replay_demos.py         # Data replay
+│   │   ├── regenerate_demos.py     # Data regeneration (visual)
+│   │   ├── convert_hdf5_to_lerobot.py # Format conversion
+│   │   └── view_port.py            # Camera utility
+│   ├── robomimic/              # RoboMimic tools
+│   ├── isaaclab_mimic/         # Isaac Lab Mimic tools
+├── source/                     # Source package
 │   ├── envs/                   # Environment definitions
-│   └── controll_scripts/       # Robot assets & input devices
 └── setup.py
 ```
 
@@ -32,7 +35,7 @@ so_arm_mimic/
 Record new demonstrations using a teleop device (e.g. Leader Arm).
 
 ```bash
-python scripts/record_demos.py \
+python scripts/tools/record_demos.py \
     --task Isaac-PickPlace-SOArm-Joint-Mimic-v0 \
     --teleop_device leader_arm \
     --num_demos 10 \
@@ -44,7 +47,7 @@ python scripts/record_demos.py \
 Replay recorded HDF5 demonstrations to verify correctness.
 
 ```bash
-python scripts/replay_demos.py \
+python scripts/tools/replay_demos.py \
     --task Isaac-PickPlace-SOArm-Joint-Mimic-v0 \
     --dataset_file ./datasets/so_arm_demos.hdf5 \
     --enable_cameras
@@ -55,14 +58,38 @@ python scripts/replay_demos.py \
 Replays actions from an existing HDF5 dataset in a new environment configuration and records new observations (e.g. images).
 
 ```bash
-python scripts/regenerate_demos.py \
+python scripts/tools/regenerate_demos.py \
     --task Isaac-PickPlace-SOArm-Joint-Mimic-v0 \
     --input_file ./datasets/so_arm_demos.hdf5 \
     --output_file ./datasets/so_arm_demos_camera.hdf5 \
     --enable_cameras
 ```
 
-### 4. Data Conversion (to LeRobot)
+### 4. Deleting Episodes
+
+Deletes episodes from an existing HDF5 dataset.
+
+```bash
+python scripts/tools/delete_episodes.py \
+    --input_file ./datasets/dataset3.hdf5 \
+    --output_file ./datasets/dataset_merged.hdf5 \
+    -d 0
+```
+
+
+### 5. Annotating Demonstrations
+
+Annotate demonstrations to add rewards and other information.
+
+```bash
+python scripts/isaaclab_mimic/annotate_demos.py \
+    --device cpu --task Isaac-PickPlace-SOArm-Joint-Mimic-v0  \
+    --auto --enable_cameras \
+    --input_file ./datasets/dataset_merged.hdf5 \
+    --output_file ./datasets/annotated_dataset.hdf5
+```
+
+### 6. Data Conversion (to LeRobot)
 
 Converts Isaac Lab HDF5 demonstration files to LeRobot dataset format for training imitation learning models.
 
@@ -74,7 +101,7 @@ pip install lerobot  # Optional
 
 **Usage:**
 ```bash
-python scripts/convert_hdf5_to_lerobot.py \
+python scripts/tools/convert_hdf5_to_lerobot.py \
     --input ./datasets/so_arm_demos.hdf5 \
     --output ./lerobot_datasets/so_arm_stack \
     --robot-type so_arm \

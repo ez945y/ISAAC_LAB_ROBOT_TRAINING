@@ -102,7 +102,7 @@ from isaaclab.devices import Se3Keyboard, Se3KeyboardCfg, Se3SpaceMouse, Se3Spac
 from isaaclab.devices.openxr import remove_camera_configs
 from isaaclab.devices.teleop_device_factory import create_teleop_device
 
-import so_arm_mimic.envs  # Register custom SO-ARM environments
+import so_arm_mimic  # Register custom SO-ARM environments
 from controll_scripts.input_devices.se3_leader_arm import Se3LeaderArm, Se3LeaderArmCfg
 from isaaclab_mimic.ui.instruction_display import InstructionDisplay, show_subtask_instructions
 
@@ -363,7 +363,7 @@ def process_success_condition(env: gym.Env, success_term: object | None, success
             
             # Reset the success logging state for next episode
             try:
-                from so_arm_mimic.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
+                from so_arm_mimic.source.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
                 if hasattr(cubes_stacked_single_gripper, "_last_state"):
                     cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
             except ImportError:
@@ -404,7 +404,7 @@ def handle_reset(
     
     # Reset the success logging state to avoid duplicate messages
     try:
-        from so_arm_mimic.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
+        from so_arm_mimic.source.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
         if hasattr(cubes_stacked_single_gripper, "_last_state"):
             cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
     except ImportError:

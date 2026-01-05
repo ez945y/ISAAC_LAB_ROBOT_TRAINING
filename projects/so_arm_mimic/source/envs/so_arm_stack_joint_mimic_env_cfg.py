@@ -157,7 +157,7 @@ def object_grasped(
     robot_cfg: SceneEntityCfg, 
     ee_frame_cfg: SceneEntityCfg, 
     object_cfg: SceneEntityCfg,
-    diff_threshold: float = 0.06,
+    diff_threshold: float = 0.12,
 ) -> torch.Tensor:
     """Check if object is grasped (close to EE and gripper closed)."""
     ee_pos = env.scene[ee_frame_cfg.name].data.target_pos_w[..., 0, :]
@@ -168,10 +168,11 @@ def object_grasped(
     # Gripper state - check if gripper is not fully open
     gripper_state = env.scene[robot_cfg.name].data.joint_pos[:, -1]
     gripper_open_val = getattr(env.cfg, 'gripper_open_val', 1.75)
-    gripper_threshold = getattr(env.cfg, 'gripper_threshold', 0.1)
+    gripper_threshold = getattr(env.cfg, 'gripper_threshold', 1.2)
     is_gripping = torch.abs(gripper_state - gripper_open_val) > gripper_threshold
     
     grasped = torch.logical_and(pose_diff < diff_threshold, is_gripping)
+    # print("is_gripping: ", is_gripping, "pose_diff: ", pose_diff, "diff_threshold: ", diff_threshold, "grasped: ", grasped)
     return grasped.float().unsqueeze(-1)
 
 def object_stacked(
@@ -181,7 +182,7 @@ def object_stacked(
     lower_object_cfg: SceneEntityCfg,
     xy_threshold: float = 0.05,
     height_threshold: float = 0.01,
-    height_diff: float = 0.05,  # Cube size (5cm)
+    height_diff: float = 0.04,  # Cube size (5cm)
 ) -> torch.Tensor:
     """Check if upper cube is stacked on lower cube."""
     upper_object = env.scene[upper_object_cfg.name]
@@ -196,7 +197,7 @@ def object_stacked(
     # Also check gripper is open (released the cube)
     gripper_state = env.scene[robot_cfg.name].data.joint_pos[:, -1]
     gripper_open_val = getattr(env.cfg, 'gripper_open_val', 1.75)
-    is_open = torch.abs(gripper_state - gripper_open_val) < 0.1
+    is_open = torch.abs(gripper_state - gripper_open_val) < 1.2
     
     stacked = torch.logical_and(stacked, is_open)
     return stacked.float().unsqueeze(-1)
@@ -497,10 +498,12 @@ class SOArmStackJointMimicEnvCfg(ManagerBasedRLEnvCfg, MimicEnvCfg):
     def __post_init__(self):
         """Post initialization - configure robot and actions."""
         # === Basic settings ===
-        self.decimation = 5
+        # Lower decimation = faster response (actions executed every N physics steps)
+        # Lower render_interval = smoother visual feedback
+        self.decimation = 2  # Reduced from 5 for lower latency
         self.episode_length_s = 60.0
-        self.sim.dt = 0.01  # 100Hz physics
-        self.sim.render_interval = 2
+        self.sim.dt = 1 / 120  # 120Hz physics
+        self.sim.render_interval = 1  # Reduced from 2 for smoother rendering
         
         # === Camera settings ===
         self.viewer.eye = [-0.4, -0.4, 0.4]

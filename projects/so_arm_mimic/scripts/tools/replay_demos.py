@@ -69,7 +69,7 @@ if args_cli.enable_pinocchio:
     import isaaclab_tasks.manager_based.locomanipulation.pick_place  # noqa: F401
 
 import isaaclab_tasks  # noqa: F401
-import so_arm_mimic.envs  # Register custom SO-ARM environments
+import so_arm_mimic  # Register custom SO-ARM environments
 from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 
 is_paused = False
