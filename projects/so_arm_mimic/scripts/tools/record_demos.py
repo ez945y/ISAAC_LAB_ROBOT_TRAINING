@@ -332,6 +332,7 @@ def setup_ui(label_text: str, env: gym.Env) -> InstructionDisplay:
     return instruction_display
 
 
+
 def process_success_condition(env: gym.Env, success_term: object | None, success_step_count: int) -> tuple[int, bool]:
     """Process the success condition for the current step.
 
@@ -360,21 +361,11 @@ def process_success_condition(env: gym.Env, success_term: object | None, success
             )
             env.recorder_manager.export_episodes([0])
             print("Success condition met! Recording completed.")
-            
-            # Reset the success logging state for next episode
-            try:
-                from so_arm_mimic.source.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
-                if hasattr(cubes_stacked_single_gripper, "_last_state"):
-                    cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
-            except ImportError:
-                pass
-            
             return success_step_count, True
     else:
         success_step_count = 0
 
     return success_step_count, False
-
 
 def handle_reset(
     env: gym.Env, success_step_count: int, instruction_display: InstructionDisplay, label_text: str,
@@ -401,14 +392,6 @@ def handle_reset(
     env.reset()
     success_step_count = 0
     instruction_display.show_demo(label_text)
-    
-    # Reset the success logging state to avoid duplicate messages
-    try:
-        from so_arm_mimic.source.envs.so_arm_stack_joint_mimic_env_cfg import cubes_stacked_single_gripper
-        if hasattr(cubes_stacked_single_gripper, "_last_state"):
-            cubes_stacked_single_gripper._last_state = {"stack_1": False, "stack_2": False, "complete": False}
-    except ImportError:
-        pass
     
     # Wait for user to be ready (while rendering)
     import time
