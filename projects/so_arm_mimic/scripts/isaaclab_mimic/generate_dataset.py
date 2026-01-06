@@ -83,6 +83,68 @@ import so_arm_mimic  # Register custom SO-ARM environments
 import isaaclab_tasks  # noqa: F401
 
 
+
+# --- Debug Helper Start ---
+import asyncio
+_global_async_tasks = None
+
+async def env_loop_debug_wrapper(*args, **kwargs):
+    """Wrapper to catch exceptions in async tasks inside env_loop."""
+    try:
+        # We need to run the original env_loop logic but periodically check tasks
+        from isaaclab_mimic.datagen.generation import env_loop
+        
+        # Create a task for the original env_loop
+        loop_task = asyncio.create_task(env_loop(*args, **kwargs))
+        
+        while not loop_task.done():
+            # diligent check for failures in data_gen_tasks
+            if _global_async_tasks:
+                if _global_async_tasks.done():
+                     # If the group task is done, check for exceptions
+                    if _global_async_tasks.exception():
+                        print(f"\n[FATAL ERROR] Async data generation tasks failed with exception:")
+                        raise _global_async_tasks.exception()
+                    # If it finished without exception but loop is still running, that's also weird
+                    # unless generation is done.
+            
+            await asyncio.sleep(0.1)
+            
+        return await loop_task
+
+    except Exception as e:
+        print(f"\n[FATAL ERROR] Exception in env_loop or async tasks: {e}")
+        import traceback
+        traceback.print_exc()
+        raise e
+# --- Debug Helper Start ---
+import asyncio
+import sys
+
+async def task_watchdog(tasks_future):
+    """Monitors the data generation tasks and exits if they fail."""
+    try:
+        while not tasks_future.done():
+            await asyncio.sleep(0.5)
+        
+        # Task is done (either finished or failed)
+        if tasks_future.exception():
+            print(f"\n[FATAL ERROR] Data generation tasks failed with exception: {tasks_future.exception()}")
+            import traceback
+            # Print stack trace of the exception if available
+            try:
+                raise tasks_future.exception()
+            except:
+                traceback.print_exc()
+            
+            # Force exit because the main thread might be stuck in env_loop
+            print("Forcing exit due to async task failure.")
+            sys.exit(1)
+            
+    except Exception as e:
+        print(f"Watchdog error: {e}")
+# --- Debug Helper End ---
+
 def main():
     num_envs = args_cli.num_envs
 
@@ -163,14 +225,25 @@ def main():
     )
 
     try:
-        data_gen_tasks = asyncio.ensure_future(asyncio.gather(*async_components["tasks"]))
+        # Ensure tasks are scheduled on the correct loop (the one passed to env_loop)
+        loop = async_components["event_loop"]
+        
+        # Schedule the data generation tasks
+        data_gen_tasks = asyncio.gather(*async_components["tasks"], return_exceptions=False)
+        # Create a future/task object that we can monitor
+        task_future = asyncio.ensure_future(data_gen_tasks, loop=loop)
+        
+        # Schedule our watchdog to catch crashes
+        loop.create_task(task_watchdog(task_future))
+        
         env_loop(
             env,
             async_components["reset_queue"],
             async_components["action_queue"],
             async_components["info_pool"],
-            async_components["event_loop"],
+            loop,
         )
+        print("[DEBUG] env_loop finished.")
     except asyncio.CancelledError:
         print("Tasks were cancelled.")
     finally:

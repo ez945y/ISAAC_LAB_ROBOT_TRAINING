@@ -15,7 +15,15 @@ from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg, Artic
 from isaaclab.devices.device_base import DevicesCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 import isaaclab.envs.mdp as mdp
-from isaaclab.envs.mdp.actions.actions_cfg import JointPositionActionCfg
+from isaaclab.envs.mdp.actions.actions_cfg import (
+    JointPositionActionCfg, JointEffortActionCfg, DifferentialInverseKinematicsActionCfg
+)
+from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
+
+from isaaclab.controllers.operational_space_cfg import OperationalSpaceControllerCfg
+from isaaclab.envs.mdp.actions.actions_cfg import OperationalSpaceControllerActionCfg
+
+
 from isaaclab.envs.mimic_env_cfg import DataGenConfig, MimicEnvCfg, SubTaskConfig
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
@@ -397,17 +405,68 @@ class ObservationsCfg:
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
-    # Joint Position Control for Arm + Gripper
-    # We combine them into a single action term if possible, or split them.
-    # Mimic usually likes a single action tensor.
-    # But JointPositionActionCfg applies to specific joints.
-    
-    # 5 Arm joints + 1 Gripper joint
-    joint_pos = JointPositionActionCfg(
+    # IK Control for Arm
+    arm_action = DifferentialInverseKinematicsActionCfg(
         asset_name="robot",
-        joint_names=["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"],
+        joint_names=["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"],
+        body_name="gripper_link",
+        controller=DifferentialIKControllerCfg(
+            command_type="pose",
+            use_relative_mode=False,
+            ik_method="dls",
+        ),
+    )
+    # arm_action = OperationalSpaceControllerActionCfg(
+    #         asset_name="robot",
+    #         joint_names=["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"],
+    #         body_name="gripper_link",
+    #         # If a task frame different from articulation root/base is desired, a RigidObject, e.g., "task_frame",
+    #         # can be added to the scene and its relative path could provided as task_frame_rel_path
+    #         # task_frame_rel_path="task_frame",
+    #         controller_cfg=OperationalSpaceControllerCfg(
+    #             target_types=["pose_abs"],
+    #             impedance_mode="fixed", # fixed or variable_kp
+    #             inertial_dynamics_decoupling=False, # True or False
+    #             partial_inertial_dynamics_decoupling=False,
+    #             gravity_compensation=False,
+    #             motion_stiffness_task=5.0,
+    #             motion_damping_ratio_task=1.0,
+    #             motion_stiffness_limits_task=(0.0, 20.0),
+    #             nullspace_control="none", # position or none
+    #         ),
+    #         nullspace_joint_pos_target="none", # center or none
+    #         position_scale=1.0,
+    #         orientation_scale=1.0,
+    #         stiffness_scale=1.0,
+    #     )
+
+        
+    # arm_action = OperationalSpaceControllerActionCfg(
+    #     asset_name="robot",
+    #     joint_names=["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"],
+    #     body_name="gripper_link",
+    #     # If a task frame different from articulation root/base is desired, a RigidObject, e.g., "task_frame",
+    #     # can be added to the scene and its relative path could provided as task_frame_rel_path
+    #     # task_frame_rel_path="task_frame",
+    #     controller_cfg=OperationalSpaceControllerCfg(
+    #         target_types=["pose_abs"],
+    #         motion_control_axes_task=(1, 1, 1, 1, 1, 1),
+    #         motion_stiffness_task=(150.0, 150.0, 150.0, 50.0, 50.0, 50.0),
+    #         motion_damping_ratio_task=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+    #         inertial_dynamics_decoupling=False,
+    #         gravity_compensation=True,
+    #     ),
+    #     nullspace_joint_pos_target="none", # center or none
+    #     position_scale=1.0,
+    #     orientation_scale=1.0,
+    #     stiffness_scale=1.0,
+    # )
+
+    # Gripper joint (Position Control)
+    gripper_action = JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=["gripper"],
         scale=1.0, 
-        use_default_offset=False, # We want absolute control
     )
 
 
@@ -669,15 +728,15 @@ class SOArmStackJointMimicEnvCfg(ManagerBasedRLEnvCfg, MimicEnvCfg):
             actuators={
                 "arm": ImplicitActuatorCfg(
                     joint_names_expr=["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"],
-                    effort_limit=50.0,
-                    stiffness=None,
-                    damping=None,
+                    effort_limit=10.0,
+                    stiffness=17.8,
+                    damping=0.6,
                 ),
                 "gripper": ImplicitActuatorCfg(
                     joint_names_expr=["gripper"],
                     effort_limit=2.0,
-                    stiffness=None,
-                    damping=None,
+                    stiffness=17.8,
+                    damping=0.6,
                 ),
             },
         )
