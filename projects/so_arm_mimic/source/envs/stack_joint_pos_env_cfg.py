@@ -56,7 +56,7 @@ class EventCfg:
         func=franka_stack_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.15, 0.25), "y": (-0.10, 0.10), "z": (0.0203, 0.0203), "yaw": (-1.0, 1, 0)},
+            "pose_range": {"x": (0.18, 0.32), "y": (-0.10, 0.10), "z": (0.0203, 0.0203), "yaw": (-1.0, 1, 0)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("cube_1"), SceneEntityCfg("cube_2"), SceneEntityCfg("cube_3")],
         },
@@ -169,7 +169,7 @@ class SO101CubeStackEnvCfg(StackEnvCfg):
         self.gripper_joint_names = ["gripper"]
         self.gripper_open_val = 1.7
         self.gripper_threshold = 1.35
-        self.open_threshold = 0.2
+        self.open_threshold = 0.5
 
         # Rigid body properties of each cube
         cube_properties = RigidBodyPropertiesCfg(
@@ -220,7 +220,7 @@ class SO101CubeStackEnvCfg(StackEnvCfg):
 
         self.scene.ee_frame = FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Robot/base_link",
-            debug_vis=True,
+            debug_vis=False,
             visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(

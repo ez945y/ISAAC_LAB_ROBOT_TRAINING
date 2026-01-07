@@ -80,7 +80,6 @@ from isaaclab.utils.datasets import EpisodeData, HDF5DatasetFileHandler
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 import so_arm_mimic  # This will auto-import source.envs and register the environments
-from so_arm_mimic.source.envs.so_arm_stack_joint_mimic_env_cfg import reset_subtask_logging_state
 
 is_paused = False
 current_action_index = 0
@@ -352,8 +351,6 @@ def replay_episode(
         False otherwise.
     """
     global current_action_index, skip_episode, is_paused
-    # Reset subtask logging state for clean logs per episode
-    reset_subtask_logging_state()
     # read initial state and actions from the loaded episode
     initial_state = episode.data["initial_state"]
     actions = episode.data["actions"]

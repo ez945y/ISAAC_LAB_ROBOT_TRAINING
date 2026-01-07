@@ -103,7 +103,7 @@ def object_stacked(
                 robot.data.joint_pos[:, gripper_joint_ids[0]]
                 - torch.tensor(env.cfg.gripper_open_val, dtype=torch.float32).to(env.device)
             )
-            > env.cfg.open_threshold,
+            < env.cfg.open_threshold,
             stacked,
         )
     else:

@@ -154,15 +154,15 @@ class Se3LeaderArm(DeviceBase):
         # 2. Apply Correction (Sign & Offset)
         q_corrected = (q_mapped * self._joint_signs) + self._joint_offsets
         
-        # DEBUG: Print raw inputs and mapped outputs (uncomment to debug)
-        if self._cfg.debug_mode and hasattr(self, '_debug_counter'):
-            self._debug_counter += 1
-            if self._debug_counter % 60 == 0:  # Print every 60 frames (~2 sec at 30Hz)
-                print(f"[DEBUG] raw_joints (0~1): {raw_joints.cpu().numpy()}")
-                print(f"[DEBUG] q_mapped (rad):   {q_mapped.cpu().numpy()}")
-                print(f"[DEBUG] q_corrected (rad): {q_corrected.cpu().numpy()}")
-        elif self._cfg.debug_mode:
-            self._debug_counter = 0
+        # # DEBUG: Print raw inputs and mapped outputs (uncomment to debug)
+        # if self._cfg.debug_mode and hasattr(self, '_debug_counter'):
+        #     self._debug_counter += 1
+        #     if self._debug_counter % 60 == 0:  # Print every 60 frames (~2 sec at 30Hz)
+        #         print(f"[DEBUG] raw_joints (0~1): {raw_joints.cpu().numpy()}")
+        #         print(f"[DEBUG] q_mapped (rad):   {q_mapped.cpu().numpy()}")
+        #         print(f"[DEBUG] q_corrected (rad): {q_corrected.cpu().numpy()}")
+        # elif self._cfg.debug_mode:
+        #     self._debug_counter = 0
         
         # Flag to print EE position after FK calculation
         should_print_ee = self._cfg.debug_mode and hasattr(self, '_debug_counter') and self._debug_counter % 60 == 0
@@ -189,8 +189,8 @@ class Se3LeaderArm(DeviceBase):
         qx, qy, qz, qw = quat_obj.as_quat()
 
         # Debug Output
-        if self._cfg.debug_mode and hasattr(self, '_debug_counter') and self._debug_counter % 60 == 0:
-            print(f"[DEBUG] EE position (m): [{trans[0]:.3f}, {trans[1]:.3f}, {trans[2]:.3f}]")
+        # if self._cfg.debug_mode and hasattr(self, '_debug_counter') and self._debug_counter % 60 == 0:
+        #     print(f"[DEBUG] EE position (m): [{trans[0]:.3f}, {trans[1]:.3f}, {trans[2]:.3f}]")
 
         q_gripper_scalar = self.gripper_lower + raw_gripper * (self.gripper_upper - self.gripper_lower)
         

@@ -42,6 +42,12 @@ python scripts/tools/record_demos.py \
     --enable_cameras
 ```
 
+python scripts/tools/record_demos.py \
+    --task PickPlace-SOArm-Camera-Mimic-v0 \
+    --teleop_device leader_arm \
+    --num_demos 10 \
+    --enable_cameras
+    
 ### 2. Replaying Demonstrations
 
 Replay recorded HDF5 demonstrations to verify correctness.
