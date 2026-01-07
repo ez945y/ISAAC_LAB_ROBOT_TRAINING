@@ -27,14 +27,9 @@ class Se3LeaderArmCfg(DeviceCfg):
     
     debug_mode: bool = True
 
-    # [設定 1] 關節方向修正
-    # 根據你的描述，如果方向反了 (往左變往右)，把第一個 1.0 改成 -1.0
     joint_signs: list[float] = field(default_factory=lambda: [1.0, 1.0, 1.0, 1.0, 1.0])
 
-    # [設定 2] 關節歸零偏移 (Rad)
     # URDF 的第一軸 origin rpy 有 1.5708 (90度)
-    # 為了抵消這個旋轉，我們通常需要設 -1.57 或 +1.57
-    # 根據你之前的測試 (左邊變前方)，建議從 -1.5708 開始試
     joint_offsets: list[float] = field(default_factory=lambda: [-1.5708, 0.0, 0.0, 0.0, 0.0])
 
 
@@ -48,6 +43,7 @@ class Se3LeaderArm(DeviceBase):
         
         self._joint_signs = torch.tensor(cfg.joint_signs, device=self._sim_device)
         self._joint_offsets = torch.tensor(cfg.joint_offsets, device=self._sim_device)
+        self._default_pose = torch.tensor([0.2, 0.0, 0.2, 1.0, 0.0, 0.0, 0.0, 0.0], device=self._sim_device)
         
         self._leader_arm: Optional["LeaderArmInputDevice"] = None
         self._init_leader_arm()
@@ -56,11 +52,18 @@ class Se3LeaderArm(DeviceBase):
         self._was_connected = False
         self._pending_reset = False
         self._additional_callbacks: dict[str, Callable] = {}
+        
+        # Default pose for initial state (before first connection)
+        # Format: [x, y, z, qw, qx, qy, qz, gripper]
 
-        # [UPDATED] Joint Limits based on URDF
-        # J2 (Elbow) 修正為 URDF 的 [-1.75, 1.57]
-        self.arm_lower = torch.tensor([-1.92, -1.75, -1.75, -1.66, -2.79], device=self._sim_device)
-        self.arm_upper = torch.tensor([ 1.92,  1.75,  1.57,  1.66,  2.79], device=self._sim_device)
+        # Store last known pose to maintain position during disconnect
+        self._last_pose = self._default_pose.clone()
+
+        self.arm_lower = torch.tensor([-1.92, -1.92, -1.92, -1.75, -2.74], device=self._sim_device)
+        self.arm_upper = torch.tensor([ 1.92,  1.75,  1.75,  1.66,  2.84], device=self._sim_device)
+        
+        # self.arm_lower = torch.tensor([-1.92, -1.75, -1.75, -1.66, -2.79], device=self._sim_device)
+        # self.arm_upper = torch.tensor([ 1.92,  1.75,  1.75,  1.66,  2.79], device=self._sim_device)
         
         # Gripper limit (J5 in URDF but handled separately here)
         self.gripper_lower = -0.17
@@ -69,7 +72,7 @@ class Se3LeaderArm(DeviceBase):
     def _init_leader_arm(self):
         try:
             from controll_scripts.input_devices.leader_arm import LeaderArmInputDevice
-            initial_pose = torch.tensor([0.25, 0.0, 0.15, 1.0, 0.0, 0.0, 0.0], device=self._sim_device)
+            initial_pose = self._default_pose.clone()
             self._leader_arm = LeaderArmInputDevice(
                 initial_pose=initial_pose,
                 device=self._sim_device,
@@ -111,7 +114,11 @@ class Se3LeaderArm(DeviceBase):
             self._leader_arm.close()
     
     def reset(self):
-        pass
+        """Reset the device to use last known pose (keeps current position)."""
+        # Update the leader arm's target to use last known pose (exclude gripper)
+        if self._leader_arm is not None:
+            last_pose_no_gripper = self._last_pose[:7].clone()
+            self._leader_arm.reset_target(last_pose_no_gripper)
 
     def add_callback(self, key: Any, func: Callable):
         self._additional_callbacks[key] = func
@@ -125,17 +132,15 @@ class Se3LeaderArm(DeviceBase):
         
         if self._was_connected and not currently_connected:
             print("\n>> [DISCONNECT] Leader arm disconnected!")
-            self._pending_reset = True
             self._was_connected = False
         
         if not currently_connected or self.pin_model is None:
-            return torch.tensor([0.2, 0.0, 0.2, 1.0, 0.0, 0.0, 0.0, 0.0], device=self._sim_device)
+            # Return last known pose (maintains position during disconnect)
+            # If never connected, this will be the default pose
+            return self._last_pose
 
-        if getattr(self, '_pending_reset', False) and currently_connected:
-            print(">> [RECONNECT] Leader arm reconnected!")
-            if "R" in self._additional_callbacks:
-                self._additional_callbacks["R"]()
-            self._pending_reset = False
+        if not self._was_connected and currently_connected:
+            print(">> [RECONNECT] Leader arm reconnected! Press 'R' on keyboard to reset.")
         
         self._was_connected = True
 
@@ -148,6 +153,19 @@ class Se3LeaderArm(DeviceBase):
         
         # 2. Apply Correction (Sign & Offset)
         q_corrected = (q_mapped * self._joint_signs) + self._joint_offsets
+        
+        # DEBUG: Print raw inputs and mapped outputs (uncomment to debug)
+        if self._cfg.debug_mode and hasattr(self, '_debug_counter'):
+            self._debug_counter += 1
+            if self._debug_counter % 60 == 0:  # Print every 60 frames (~2 sec at 30Hz)
+                print(f"[DEBUG] raw_joints (0~1): {raw_joints.cpu().numpy()}")
+                print(f"[DEBUG] q_mapped (rad):   {q_mapped.cpu().numpy()}")
+                print(f"[DEBUG] q_corrected (rad): {q_corrected.cpu().numpy()}")
+        elif self._cfg.debug_mode:
+            self._debug_counter = 0
+        
+        # Flag to print EE position after FK calculation
+        should_print_ee = self._cfg.debug_mode and hasattr(self, '_debug_counter') and self._debug_counter % 60 == 0
         
         # 3. Pinocchio FK
         q_np = q_corrected.cpu().numpy().astype(np.float64)
@@ -171,15 +189,8 @@ class Se3LeaderArm(DeviceBase):
         qx, qy, qz, qw = quat_obj.as_quat()
 
         # Debug Output
-        # print(f"J0 (Input rad): {q_corrected[0]:.2f}")
-        # print(f"XYZ: [{trans[0]:.2f}, {trans[1]:.2f}, {trans[2]:.2f}]")
-        # # 簡單指引
-        # if abs(trans[1]) < 0.05 and trans[0] > 0.1:
-        #     print("-> 狀態：正前方 (X+)")
-        # elif trans[1] > 0.1 and abs(trans[0]) < 0.05:
-        #     print("-> 狀態：左邊 (Y+)")
-        # elif trans[1] < -0.1 and abs(trans[0]) < 0.05:
-        #     print("-> 狀態：右邊 (Y-)")
+        if self._cfg.debug_mode and hasattr(self, '_debug_counter') and self._debug_counter % 60 == 0:
+            print(f"[DEBUG] EE position (m): [{trans[0]:.3f}, {trans[1]:.3f}, {trans[2]:.3f}]")
 
         q_gripper_scalar = self.gripper_lower + raw_gripper * (self.gripper_upper - self.gripper_lower)
         
@@ -187,4 +198,8 @@ class Se3LeaderArm(DeviceBase):
         rot_t = torch.tensor([qw, qx, qy, qz], dtype=torch.float32, device=self._sim_device)
         grip_t = torch.tensor([q_gripper_scalar], dtype=torch.float32, device=self._sim_device)
         
-        return torch.cat([pos_t, rot_t, grip_t])
+        # Update last known pose for use during disconnect
+        current_pose = torch.cat([pos_t, rot_t, grip_t])
+        self._last_pose = current_pose
+        
+        return current_pose
