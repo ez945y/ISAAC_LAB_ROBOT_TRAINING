@@ -44,7 +44,7 @@ def object_grasped(
     robot_cfg: SceneEntityCfg,
     ee_frame_cfg: SceneEntityCfg,
     object_cfg: SceneEntityCfg,
-    diff_threshold: float = 0.06,
+    diff_threshold: float = 0.02,
 ) -> torch.Tensor:
     """Check if an object is grasped by the specified robot."""
 
@@ -54,7 +54,9 @@ def object_grasped(
 
     object_pos = object.data.root_pos_w
     end_effector_pos = ee_frame.data.target_pos_w[:, 0, :]
-    pose_diff = torch.linalg.vector_norm(object_pos - end_effector_pos, dim=1)
+    pose_diff = torch.linalg.vector_norm(object_pos - end_effector_pos + torch.tensor([0.0, 0.0, 0.1], device=object_pos.device), dim=1)
+    # if object_cfg.name == "cube_2":
+    #     print(object_pos - end_effector_pos + torch.tensor([0.0, 0.0, 0.1], device=object_pos.device))
     
     if hasattr(env.cfg, "gripper_joint_names"):
         gripper_joint_ids, _ = robot.find_joints(env.cfg.gripper_joint_names)
@@ -97,12 +99,11 @@ def object_stacked(
     if hasattr(env.cfg, "gripper_joint_names"):
         gripper_joint_ids, _ = robot.find_joints(env.cfg.gripper_joint_names)
         stacked = torch.logical_and(
-            torch.isclose(
-                robot.data.joint_pos[:, gripper_joint_ids[0]],
-                torch.tensor(env.cfg.gripper_open_val, dtype=torch.float32).to(env.device),
-                atol=1e-4,
-                rtol=1e-4,
-            ),
+            torch.abs(
+                robot.data.joint_pos[:, gripper_joint_ids[0]]
+                - torch.tensor(env.cfg.gripper_open_val, dtype=torch.float32).to(env.device)
+            )
+            > env.cfg.open_threshold,
             stacked,
         )
     else:

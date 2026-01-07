@@ -167,8 +167,9 @@ class SO101CubeStackEnvCfg(StackEnvCfg):
         )
         # utilities for gripper status check
         self.gripper_joint_names = ["gripper"]
-        self.gripper_open_val = 0.04
-        self.gripper_threshold = 0.005
+        self.gripper_open_val = 1.7
+        self.gripper_threshold = 1.35
+        self.open_threshold = 0.2
 
         # Rigid body properties of each cube
         cube_properties = RigidBodyPropertiesCfg(
@@ -214,30 +215,30 @@ class SO101CubeStackEnvCfg(StackEnvCfg):
 
         # Listens to the required transforms
         marker_cfg = FRAME_MARKER_CFG.copy()
-        marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+        marker_cfg.markers["frame"].scale = (0.05, 0.05, 0.05)
         marker_cfg.prim_path = "/Visuals/FrameTransformer"
+
         self.scene.ee_frame = FrameTransformerCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/gripper_link",
-            debug_vis=False,
-            # visualizer_cfg=FRAME_MARKER_SMALL_CFG.replace(prim_path="/Visuals/EndEffectorFrameTransformer"),
+            prim_path="{ENV_REGEX_NS}/Robot/base_link",
+            debug_vis=True,
+            visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(
-                    prim_path=f"{{ENV_REGEX_NS}}/Robot/gripper_link",
+                    prim_path="{ENV_REGEX_NS}/Robot/gripper_link",
                     name="ee_tcp",
                     offset=OffsetCfg(
                         pos=(0.0, 0.0, 0.0),
-                        rot=(1.0, 0.0, 0.0, 0.0),
                     ),
                 ),
                 # Index 1: 左指 (固定/虛擬) - 綁定在手掌 (wrist_link)
                 FrameTransformerCfg.FrameCfg(
-                    prim_path=f"{{ENV_REGEX_NS}}/Robot/wrist_link",
+                    prim_path="{ENV_REGEX_NS}/Robot/gripper_link",
                     name="tool_leftfinger",
-                    offset=OffsetCfg(pos=(0.0, 0.0, 0.03)),
+                    offset=OffsetCfg(pos=(0.0, 0.0, 0.0)),
                 ),
                 # Index 2: 右指 (活動/真實) - 綁定在 gripper_link
                 FrameTransformerCfg.FrameCfg(
-                    prim_path=f"{{ENV_REGEX_NS}}/Robot/gripper_link",
+                    prim_path="{ENV_REGEX_NS}/Robot/moving_jaw_so101_v1_link",
                     name="tool_rightfinger",
                     offset=OffsetCfg(pos=(0.0, 0.0, 0.0)),
                 ),

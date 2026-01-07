@@ -67,13 +67,14 @@ def cubes_stacked(
         if hasattr(env.cfg, "gripper_joint_names"):
             gripper_joint_ids, _ = robot.find_joints(env.cfg.gripper_joint_names)
             # Check first gripper joint is open
+            threshold = env.cfg.gripper_open_val - env.cfg.gripper_threshold 
+            is_gripper_open = robot.data.joint_pos[:, gripper_joint_ids[0]] <= threshold
             stacked = torch.logical_and(
-                torch.isclose(
-                    robot.data.joint_pos[:, gripper_joint_ids[0]],
-                    torch.tensor(env.cfg.gripper_open_val, dtype=torch.float32).to(env.device),
-                    atol=atol,
-                    rtol=rtol,
-                ),
+                    torch.abs(
+                    robot.data.joint_pos[:, gripper_joint_ids[0]]
+                    - torch.tensor(env.cfg.gripper_open_val, dtype=torch.float32).to(env.device)
+                )
+                > env.cfg.open_threshold,
                 stacked,
             )
         else:
